@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Milk Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream:    #FDF6EC;
+    --warm:     #F5E6CC;
+    --milk:     #FEFCF8;
+    --brown:    #4A2C0A;
+    --caramel:  #C47D2E;
+    --yes:      #4CAF68;
+    --no:       #E05252;
+    --missed:   #D4C4A8;
+    --text:     #2D1A06;
+    --muted:    #8A6A4A;
+    --shadow:   rgba(74,44,10,0.12);
+    --radius:   16px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--cream);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== BACKGROUND ===== */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, #F0D9B0 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 110% 80%, #E8C98A 0%, transparent 60%),
+      var(--cream);
+  }
+
+  /* ===== APP WRAPPER ===== */
+  #app {
+    max-width: 420px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 80px;
+  }
+
+  /* ===== SCREENS ===== */
+  .screen { display: none; flex-direction: column; flex: 1; animation: fadeUp 0.35s ease; }
+  .screen.active { display: flex; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== HEADER ===== */
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 20px 0;
+  }
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    color: var(--brown);
+    letter-spacing: -0.02em;
+  }
+  .logo span { color: var(--caramel); font-style: italic; }
+  .user-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: white;
+    border-radius: 30px;
+    padding: 6px 12px 6px 8px;
+    box-shadow: 0 2px 8px var(--shadow);
+    font-size: 0.8rem; font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .user-badge .avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--caramel);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: white; font-weight: 600;
+  }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: 0 4px 20px var(--shadow);
+    padding: 24px;
+    margin: 16px 16px 0;
+  }
+  .card-sm { padding: 18px; }
+
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    color: var(--brown);
+    margin-bottom: 4px;
+  }
+  .section-sub {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  /* ===== FORM ===== */
+  .form-group { margin-bottom: 16px; }
+  label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 7px;
+  }
+  input[type=text], input[type=password], input[type=number] {
+    width: 100%;
+    padding: 13px 16px;
+    border: 2px solid var(--warm);
+    border-radius: 10px;
+    background: var(--milk);
+    font-size: 0.95rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus { border-color: var(--caramel); }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    display: block; width: 100%;
+    padding: 14px;
+    border: none; border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: center;
+  }
+  .btn-primary {
+    background: var(--brown);
+    color: white;
+  }
+  .btn-primary:hover { background: #3A1E06; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(74,44,10,0.3); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: var(--warm);
+    color: var(--brown);
+    margin-top: 10px;
+  }
+  .btn-danger { background: #FEE2E2; color: var(--no); margin-top: 10px; }
+
+  /* ===== BIG YES/NO BUTTONS ===== */
+  .yesno-wrap {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin-top: 4px;
+  }
+  .btn-yes, .btn-no {
+    border: none; border-radius: 14px;
+    padding: 28px 16px;
+    font-size: 1.1rem; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+  }
+  .btn-yes { background: #E8F8EC; color: var(--yes); }
+  .btn-no  { background: #FCEAEA; color: var(--no); }
+  .btn-yes:hover { background: var(--yes); color: white; transform: scale(1.03); }
+  .btn-no:hover  { background: var(--no);  color: white; transform: scale(1.03); }
+  .btn-yes:active, .btn-no:active { transform: scale(0.98); }
+  .yn-icon { font-size: 2rem; }
+
+  /* Today already logged */
+  .today-status {
+    text-align: center; padding: 20px 0 8px;
+  }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: 30px;
+    font-weight: 600; font-size: 1rem;
+  }
+  .status-yes { background: #E8F8EC; color: var(--yes); }
+  .status-no  { background: #FCEAEA; color: var(--no); }
+
+  /* ===== BOTTOM NAV ===== */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 420px;
+    display: flex; gap: 0;
+    background: white;
+    border-top: 1px solid var(--warm);
+    box-shadow: 0 -4px 20px var(--shadow);
+  }
+  .nav-btn {
+    flex: 1; border: none; background: none;
+    padding: 14px 8px 12px;
+    cursor: pointer;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 3px;
+    font-size: 0.65rem; font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    transition: color 0.15s;
+  }
+  .nav-btn svg { width: 22px; height: 22px; }
+  .nav-btn.active { color: var(--caramel); }
+  .nav-btn.active svg path, .nav-btn.active svg rect, .nav-btn.active svg circle, .nav-btn.active svg polyline { stroke: var(--caramel); }
+
+  /* ===== CALENDAR ===== */
+  .cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .cal-month {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.15rem; color: var(--brown);
+  }
+  .cal-nav { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: var(--muted); padding: 4px 8px; border-radius: 8px; }
+  .cal-nav:hover { background: var(--warm); }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 4px; text-align: center;
+  }
+  .cal-dow {
+    font-size: 0.65rem; font-weight: 700;
+    color: var(--muted); text-transform: uppercase;
+    padding-bottom: 6px; letter-spacing: 0.05em;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    font-size: 0.82rem; font-weight: 500;
+    cursor: default;
+    transition: transform 0.1s;
+    position: relative;
+  }
+  .cal-day.blank { background: none; }
+  .cal-day.missed { background: var(--warm); color: var(--muted); cursor: pointer; }
+  .cal-day.missed:hover { transform: scale(1.12); background: #EAD9BC; }
+  .cal-day.yes { background: var(--yes); color: white; }
+  .cal-day.no  { background: var(--no);  color: white; }
+  .cal-day.today-empty { background: var(--warm); color: var(--brown); font-weight: 700; box-shadow: 0 0 0 2px var(--caramel); cursor: pointer; }
+
+  /* ===== STATS ===== */
+  .stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .stat-box {
+    background: var(--cream);
+    border-radius: 12px; padding: 16px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem; color: var(--brown);
+    line-height: 1;
+  }
+  .stat-lbl {
+    font-size: 0.72rem; color: var(--muted);
+    font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; margin-top: 4px;
+  }
+  .stat-box.full { grid-column: 1 / -1; }
+
+  /* rate setting */
+  .rate-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 16px; padding-top: 16px;
+    border-top: 1px solid var(--warm);
+  }
+  .rate-row label { margin: 0; white-space: nowrap; flex: 1; }
+  .rate-row input { width: 90px; text-align: center; }
+
+  /* ===== STREAK ===== */
+  .streak-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 0; border-bottom: 1px solid var(--warm);
+  }
+  .streak-icon { font-size: 2.2rem; }
+  .streak-info { flex: 1; }
+  .streak-num { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--brown); line-height: 1; }
+  .streak-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+  /* ===== MISC ===== */
+  .error-msg {
+    font-size: 0.82rem; color: var(--no);
+    margin-top: 8px; text-align: center;
+    min-height: 20px;
+  }
+  .success-msg {
+    font-size: 0.82rem; color: var(--yes);
+    margin-top: 8px; text-align: center;
+  }
+  .divider { text-align: center; font-size: 0.78rem; color: var(--muted); margin: 14px 0; }
+  .toggle-link { color: var(--caramel); cursor: pointer; font-weight: 600; text-decoration: underline; }
+  .milk-glass { font-size: 3.5rem; text-align: center; padding: 12px 0 4px; }
+  .greeting { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--brown); margin-bottom: 4px; font-style: italic; }
+  .greeting-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+  .loading { text-align: center; padding: 40px; color: var(--muted); font-size: 0.9rem; }
+
+  /* Week bar */
+  .week-bar {
+    display: flex; justify-content: space-between;
+    gap: 6px; margin-top: 16px;
+  }
+  .week-day { flex: 1; text-align: center; }
+  .week-dot {
+    width: 100%; aspect-ratio: 1; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .week-dot.yes { background: var(--yes); color: white; }
+  .week-dot.no  { background: var(--no);  color: white; }
+  .week-dot.missed { background: var(--warm); color: var(--muted); }
+  .week-dot.future { background: #F0E8DC; color: #C4A882; }
+  .week-lbl { font-size: 0.62rem; color: var(--muted); margin-top: 4px; font-weight: 600; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(45,26,6,0.4); backdrop-filter: blur(4px);
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: white; width: 100%; max-width: 420px;
+    border-radius: 24px 24px 0 0;
+    padding: 28px 24px 36px;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; color: var(--brown); margin-bottom: 8px; }
+  .modal-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+
+  /* Spinner */
+  .spinner {
+    border: 2px solid var(--warm);
+    border-top: 2px solid var(--caramel);
+    border-radius: 50%; width: 18px; height: 18px;
+    animation: spin 0.7s linear infinite;
+    display: inline-block; vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Auth screen centering */
+  #auth-screen { justify-content: center; padding: 20px; min-height: 100vh; }
+  .auth-logo { text-align: center; margin-bottom: 32px; }
+  .auth-logo .big-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.2rem; color: var(--brown);
+  }
+  .auth-logo .tagline { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+  .auth-logo .icon { font-size: 3rem; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== AUTH SCREEN ===== -->
+  <div id="auth-screen" class="screen active">
+    <div class="auth-logo">
+      <div class="icon">🥛</div>
+      <div class="big-logo">Milk<span style="color:var(--caramel);font-style:italic">ly</span></div>
+      <div class="tagline">Your personal milk tracking companion</div>
+    </div>
+    <div class="card">
+      <div class="section-title" id="auth-title">Welcome back</div>
+      <div class="section-sub" id="auth-sub">Sign in to continue tracking</div>
+      <div class="form-group" id="name-group" style="display:none">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Your full name" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="auth-user" placeholder="your_username" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div id="auth-error" class="error-msg"></div>
+      <button class="btn btn-primary" onclick="doAuth()" id="auth-btn">Sign In</button>
+      <div class="divider">
+        <span id="auth-toggle-text">Don't have an account?</span>
+        <span class="toggle-link" onclick="toggleAuthMode()"> Register</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HOME SCREEN ===== -->
+  <div id="home-screen" class="screen">
+    <div class="top-bar">
+      <div class="logo">Milk<span>ly</span></div>
+      <div class="user-badge" onclick="showLogout()">
+        <div class="avatar" id="user-avatar">?</div>
+        <span id="user-name-short">...</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="greeting" id="home-greeting">Good morning,</div>
+      <div class="greeting-sub" id="today-date-str">Today is —</div>
+
+      <!-- Today not logged -->
+      <div id="log-today-section">
+        <div class="milk-glass">🥛</div>
+        <p style="text-align:center; font-size:0.9rem; color:var(--muted); margin-bottom:16px;">Did you drink your milk today?</p>
+        <div class="yesno-wrap">
+          <button class="btn-yes" onclick="logToday(true)">
+            <span class="yn-icon">✓</span>
+            <span>Yes!</span>
+          </button>
+          <button class="btn-no" onclick="logToday(false)">
+            <span class="yn-icon">✗</span>
+            <span>Nope</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Today logged -->
+      <div id="logged-today-section" style="display:none">
+        <div class="today-status">
+          <div class="status-badge" id="today-status-badge">—</div>
+          <p style="font-size:0.8rem;color:var(--muted);margin-top:10px;">Logged for today</p>
+          <button class="btn btn-secondary" style="margin-top:12px;width:auto;padding:8px 20px;font-size:0.82rem" onclick="editToday()">Change</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- This week mini view -->
+    <div class="card card-sm">
+      <div style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">This Week</div>
+      <div class="week-bar" id="week-bar"></div>
+    </div>
+
+    <!-- Streak -->
+    <div class="card card-sm">
+      <div class="streak-row">
+        <div class="streak-icon">🔥</div>
+        <div class="streak-info">
+          <div class="streak-num" id="streak-num">0</div>
+          <div class="streak-sub">day streak</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:0.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;">Best</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;color:var(--brown)" id="best-streak">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HISTORY SCREEN ===== -->
+  <div id="history-screen" class="screen">
+    <div class="top-bar">
+      <div class="logo">Milk<span>ly</span></div>
+    </div>
+    <div class="card">
+      <div class="cal-header">
+        <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
+        <div class="cal-month" id="cal-month-label">—</div>
+        <button class="cal-nav" onclick="changeMonth(1)">›</button>
+      </div>
+      <div class="cal-grid" id="cal-grid">
+        <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
+        <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div>
+        <div class="cal-dow">S</div>
+      </div>
+    </div>
+    <div class="card card-sm" style="display:flex;gap:16px;align-items:center;justify-content:center">
+      <span style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:50%;background:var(--yes);display:inline-block"></span>Drank</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:50%;background:var(--no);display:inline-block"></span>Skipped</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:50%;background:var(--warm);display:inline-block"></span>Missed</span>
+    </div>
+    <div style="padding:8px 16px 0;font-size:0.75rem;color:var(--muted);text-align:center">Tap a missed (tan) day to log it</div>
+  </div>
+
+  <!-- ===== STATS SCREEN ===== -->
+  <div id="stats-screen" class="screen">
+    <div class="top-bar">
+      <div class="logo">Milk<span>ly</span></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Analytics</div>
+      <div class="section-sub">Your milk drinking insights</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-val" id="stat-total-glasses">0</div>
+          <div class="stat-lbl">Total Glasses</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="stat-pct">0%</div>
+          <div class="stat-lbl">Success Rate</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="stat-week-glasses">0</div>
+          <div class="stat-lbl">This Week</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="stat-month-glasses">0</div>
+          <div class="stat-lbl">This Month</div>
+        </div>
+        <div class="stat-box full">
+          <div class="stat-val" id="stat-cost">₹0</div>
+          <div class="stat-lbl">Total Spent</div>
+        </div>
+      </div>
+      <div class="rate-row">
+        <label>Rate per glass (₹)</label>
+        <input type="number" id="rate-input" value="30" min="1" max="999" onchange="saveRate(); refreshStats();">
+      </div>
+    </div>
+    <div class="card card-sm">
+      <div style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Monthly Breakdown</div>
+      <div id="monthly-breakdown"></div>
+    </div>
+
+    <!-- Reset -->
+    <div style="padding:0 16px;margin-top:8px">
+      <button class="btn btn-danger" onclick="confirmReset()">🗑 Reset All Data</button>
+    </div>
+  </div>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="bottom-nav" id="main-nav" style="display:none">
+    <button class="nav-btn active" id="nav-home" onclick="showScreen('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      Home
+    </button>
+    <button class="nav-btn" id="nav-history" onclick="showScreen('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      History
+    </button>
+    <button class="nav-btn" id="nav-stats" onclick="showScreen('stats')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6"  y1="20" x2="6"  y2="14"/>
+      </svg>
+      Stats
+    </button>
+  </nav>
+
+</div>
+
+<!-- ===== EDIT DAY MODAL ===== -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal-box">
+    <div class="modal-title" id="edit-modal-title">Log this day</div>
+    <div class="modal-sub" id="edit-modal-sub">Did you drink milk?</div>
+    <div class="yesno-wrap">
+      <button class="btn-yes" onclick="submitEdit(true)">
+        <span class="yn-icon">✓</span><span>Yes</span>
+      </button>
+      <button class="btn-no" onclick="submitEdit(false)">
+        <span class="yn-icon">✗</span><span>No</span>
+      </button>
+    </div>
+    <button class="btn btn-secondary" onclick="closeModal()" style="margin-top:14px">Cancel</button>
+  </div>
+</div>
+
+<!-- ===== LOGOUT MODAL ===== -->
+<div class="modal-overlay" id="logout-modal">
+  <div class="modal-box">
+    <div class="modal-title">Account</div>
+    <div class="modal-sub" id="logout-user-info">Signed in as —</div>
+    <button class="btn btn-danger" onclick="doLogout()">Sign Out</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('logout-modal').classList.remove('open')">Cancel</button>
+  </div>
+</div>
+
+<!-- ===== RESET MODAL ===== -->
+<div class="modal-overlay" id="reset-modal">
+  <div class="modal-box">
+    <div class="modal-title">Reset All Data?</div>
+    <div class="modal-sub">This will permanently delete all your milk logs. This cannot be undone.</div>
+    <button class="btn btn-danger" onclick="doReset()">Yes, Delete Everything</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('reset-modal').classList.remove('open')">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ==================== CONFIG ====================
+// TODO: Replace these with your actual Supabase project URL and anon key
+const SUPABASE_URL = 'https://vsljqxolikxykcvxmvpb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_5Yba7sqaL4trWvyil9pfEA_yXwmOIAy';
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ==================== STATE ====================
+let currentUser = null;
+let logs = {}; // { 'YYYY-MM-DD': true/false }
+let calYear, calMonth;
+let editingDate = null;
+let isRegisterMode = false;
+
+// ==================== INIT ====================
+async function init() {
+  // Check localStorage for session
+  const saved = localStorage.getItem('milkly_user');
+  if (saved) {
+    try {
+      currentUser = JSON.parse(saved);
+      await loadLogs();
+      showApp();
+    } catch(e) {
+      localStorage.removeItem('milkly_user');
+      showScreen('auth', true);
+    }
+  } else {
+    showScreen('auth', true);
+  }
+}
+
+// ==================== AUTH ====================
+function toggleAuthMode() {
+  isRegisterMode = !isRegisterMode;
+  document.getElementById('auth-title').textContent = isRegisterMode ? 'Create account' : 'Welcome back';
+  document.getElementById('auth-sub').textContent = isRegisterMode ? 'Start tracking your milk habits' : 'Sign in to continue tracking';
+  document.getElementById('auth-btn').textContent = isRegisterMode ? 'Register' : 'Sign In';
+  document.getElementById('auth-toggle-text').textContent = isRegisterMode ? 'Already have an account?' : "Don't have an account?";
+  document.querySelector('.toggle-link').textContent = isRegisterMode ? ' Sign In' : ' Register';
+  document.getElementById('name-group').style.display = isRegisterMode ? 'block' : 'none';
+  document.getElementById('auth-error').textContent = '';
+}
+
+async function doAuth() {
+  const userInput = document.getElementById('auth-user').value.trim().toLowerCase();
+  const pass = document.getElementById('auth-pass').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+
+  if (!userInput || !pass) { errEl.textContent = 'Please fill in all fields.'; return; }
+
+  const btn = document.getElementById('auth-btn');
+  btn.innerHTML = '<span class="spinner"></span> Please wait…';
+  btn.disabled = true;
+
+  try {
+    if (isRegisterMode) {
+      const name = document.getElementById('reg-name').value.trim();
+      if (!name) { errEl.textContent = 'Enter your full name.'; btn.textContent='Register'; btn.disabled=false; return; }
+
+      // Check username not taken
+      const { data: existing } = await db.from('users').select('id').eq('username', userInput).single();
+      if (existing) { errEl.textContent = 'Username already taken.'; btn.textContent='Register'; btn.disabled=false; return; }
+
+      // Hash password (simple, not crypto — for personal use)
+      const hashed = btoa(pass + '_milkly_salt_' + userInput);
+      const { data, error } = await db.from('users').insert({ username: userInput, password_hash: hashed, full_name: name }).select().single();
+      if (error) throw error;
+      currentUser = data;
+    } else {
+      const hashed = btoa(pass + '_milkly_salt_' + userInput);
+      const { data, error } = await db.from('users').select('*').eq('username', userInput).eq('password_hash', hashed).single();
+      if (error || !data) { errEl.textContent = 'Invalid username or password.'; btn.textContent='Sign In'; btn.disabled=false; return; }
+      currentUser = data;
+    }
+
+    localStorage.setItem('milkly_user', JSON.stringify(currentUser));
+    await loadLogs();
+    showApp();
+  } catch(e) {
+    errEl.textContent = 'Error: ' + (e.message || 'Something went wrong');
+    btn.textContent = isRegisterMode ? 'Register' : 'Sign In';
+    btn.disabled = false;
+  }
+}
+
+function showLogout() {
+  document.getElementById('logout-user-info').textContent = 'Signed in as ' + currentUser.full_name;
+  document.getElementById('logout-modal').classList.add('open');
+}
+
+function doLogout() {
+  localStorage.removeItem('milkly_user');
+  currentUser = null; logs = {};
+  document.getElementById('logout-modal').classList.remove('open');
+  document.getElementById('main-nav').style.display = 'none';
+  showScreen('auth', true);
+}
+
+// ==================== DATA ====================
+async function loadLogs() {
+  const { data, error } = await db.from('milk_logs').select('log_date, drank').eq('user_id', currentUser.id);
+  if (error) throw error;
+  logs = {};
+  (data || []).forEach(r => { logs[r.log_date] = r.drank; });
+}
+
+async function saveLog(dateStr, drank) {
+  const { error } = await db.from('milk_logs').upsert({ user_id: currentUser.id, log_date: dateStr, drank }, { onConflict: 'user_id,log_date' });
+  if (error) throw error;
+  logs[dateStr] = drank;
+}
+
+// ==================== APP SCREENS ====================
+function showApp() {
+  document.getElementById('auth-screen').classList.remove('active');
+  document.getElementById('main-nav').style.display = 'flex';
+  showScreen('home');
+  refreshHome();
+}
+
+function showScreen(name, isAuth = false) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(name + '-screen').classList.add('active');
+  if (!isAuth) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    const nb = document.getElementById('nav-' + name);
+    if (nb) nb.classList.add('active');
+
+    if (name === 'history') refreshCalendar();
+    if (name === 'stats')   refreshStats();
+    if (name === 'home')    refreshHome();
+  }
+}
+
+// ==================== HOME ====================
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function refreshHome() {
+  const now = new Date();
+  const hour = now.getHours();
+  const greet = hour < 12 ? 'Good morning,' : hour < 17 ? 'Good afternoon,' : 'Good evening,';
+  document.getElementById('home-greeting').textContent = greet;
+
+  const firstName = (currentUser?.full_name || '').split(' ')[0];
+  const dateOpts = { weekday:'long', month:'long', day:'numeric' };
+  document.getElementById('today-date-str').textContent = now.toLocaleDateString('en-US', dateOpts);
+
+  document.getElementById('user-avatar').textContent = firstName[0]?.toUpperCase() || '?';
+  document.getElementById('user-name-short').textContent = firstName;
+
+  const td = todayStr();
+  const todayLogged = td in logs;
+  document.getElementById('log-today-section').style.display = todayLogged ? 'none' : 'block';
+  document.getElementById('logged-today-section').style.display = todayLogged ? 'block' : 'none';
+
+  if (todayLogged) {
+    const b = document.getElementById('today-status-badge');
+    b.textContent = logs[td] ? '✓ Drank milk today' : '✗ Skipped today';
+    b.className = 'status-badge ' + (logs[td] ? 'status-yes' : 'status-no');
+  }
+
+  refreshWeekBar();
+  refreshStreak();
+}
+
+function refreshWeekBar() {
+  const bar = document.getElementById('week-bar');
+  bar.innerHTML = '';
+  const days = ['S','M','T','W','T','F','S'];
+  const now = new Date();
+  const dow = now.getDay(); // 0=Sun
+  const td = todayStr();
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - dow + i);
+    const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const isFuture = ds > td;
+    let cls = 'future', icon = days[i];
+    if (!isFuture) {
+      if (ds in logs) { cls = logs[ds] ? 'yes' : 'no'; icon = logs[ds] ? '✓' : '✗'; }
+      else { cls = 'missed'; }
+    }
+    bar.innerHTML += `<div class="week-day">
+      <div class="week-dot ${cls}">${icon}</div>
+      <div class="week-lbl">${days[i]}</div>
+    </div>`;
+  }
+}
+
+function refreshStreak() {
+  const td = todayStr();
+  let streak = 0, best = 0, cur = 0;
+  // Build sorted dates
+  const allDates = Object.keys(logs).filter(k => logs[k]).sort();
+  if (allDates.length === 0) { document.getElementById('streak-num').textContent = 0; document.getElementById('best-streak').textContent = 0; return; }
+
+  // Current streak from today backward
+  let d = new Date(); 
+  while (true) {
+    const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if (logs[ds] === true) { streak++; d.setDate(d.getDate()-1); }
+    else if (ds === td && !(td in logs)) { d.setDate(d.getDate()-1); } // today not logged yet, skip
+    else break;
+    if (streak > 365) break;
+  }
+
+  // Best streak
+  let prev = null, run = 0;
+  allDates.forEach(ds => {
+    if (prev) {
+      const diff = (new Date(ds) - new Date(prev)) / 86400000;
+      if (diff === 1) { run++; } else { best = Math.max(best, run); run = 1; }
+    } else { run = 1; }
+    prev = ds;
+  });
+  best = Math.max(best, run);
+
+  document.getElementById('streak-num').textContent = streak;
+  document.getElementById('best-streak').textContent = best;
+}
+
+async function logToday(drank) {
+  const td = todayStr();
+  try {
+    await saveLog(td, drank);
+    refreshHome();
+  } catch(e) { alert('Error saving: ' + e.message); }
+}
+
+function editToday() {
+  editingDate = todayStr();
+  document.getElementById('edit-modal-title').textContent = 'Change today\'s log';
+  document.getElementById('edit-modal-sub').textContent = 'Did you drink milk today?';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+// ==================== CALENDAR ====================
+function refreshCalendar() {
+  const now = new Date();
+  if (!calYear) { calYear = now.getFullYear(); calMonth = now.getMonth(); }
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent = monthNames[calMonth] + ' ' + calYear;
+
+  const grid = document.getElementById('cal-grid');
+  // Remove day cells (keep DOW headers = first 7 children)
+  while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const td = todayStr();
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day blank'; grid.appendChild(el);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const ds = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const isFuture = ds > td;
+    const el = document.createElement('div');
+    el.textContent = day;
+    if (isFuture) { el.className = 'cal-day blank'; el.style.color='#C4A882'; }
+    else if (ds in logs) { el.className = 'cal-day ' + (logs[ds] ? 'yes' : 'no'); }
+    else if (ds === td) { el.className = 'cal-day today-empty'; el.title = 'Log today'; el.onclick = () => openEditModal(ds); }
+    else { el.className = 'cal-day missed'; el.onclick = () => openEditModal(ds); }
+    grid.appendChild(el);
+  }
+}
+
+function changeMonth(dir) {
+  calMonth += dir;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  refreshCalendar();
+}
+
+function openEditModal(ds) {
+  editingDate = ds;
+  const d = new Date(ds + 'T12:00:00');
+  const opts = { weekday:'long', month:'long', day:'numeric' };
+  document.getElementById('edit-modal-title').textContent = d.toLocaleDateString('en-US', opts);
+  document.getElementById('edit-modal-sub').textContent = 'Did you drink milk on this day?';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+async function submitEdit(drank) {
+  if (!editingDate) return;
+  try {
+    await saveLog(editingDate, drank);
+    closeModal();
+    if (document.getElementById('history-screen').classList.contains('active')) refreshCalendar();
+    if (document.getElementById('home-screen').classList.contains('active')) refreshHome();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editingDate = null;
+}
+
+// ==================== STATS ====================
+function saveRate() {
+  const r = parseFloat(document.getElementById('rate-input').value) || 30;
+  localStorage.setItem('milkly_rate', r);
+}
+
+function getRate() {
+  const r = localStorage.getItem('milkly_rate');
+  return r ? parseFloat(r) : 30;
+}
+
+function refreshStats() {
+  document.getElementById('rate-input').value = getRate();
+  const rate = getRate();
+  const td = todayStr();
+  const now = new Date();
+
+  // All time
+  const totalGlasses = Object.values(logs).filter(v => v === true).length;
+  const totalLogged  = Object.keys(logs).length;
+  const pct = totalLogged ? Math.round(totalGlasses / totalLogged * 100) : 0;
+
+  // This week
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  const weekStartStr = weekStart.getFullYear()+'-'+String(weekStart.getMonth()+1).padStart(2,'0')+'-'+String(weekStart.getDate()).padStart(2,'0');
+  const weekGlasses = Object.entries(logs).filter(([d,v]) => d >= weekStartStr && d <= td && v === true).length;
+
+  // This month
+  const monthStr = String(now.getFullYear())+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const monthGlasses = Object.entries(logs).filter(([d,v]) => d.startsWith(monthStr) && v === true).length;
+
+  document.getElementById('stat-total-glasses').textContent = totalGlasses;
+  document.getElementById('stat-pct').textContent = pct + '%';
+  document.getElementById('stat-week-glasses').textContent = weekGlasses;
+  document.getElementById('stat-month-glasses').textContent = monthGlasses;
+  document.getElementById('stat-cost').textContent = '₹' + (totalGlasses * rate).toLocaleString();
+
+  // Monthly breakdown
+  const byMonth = {};
+  Object.entries(logs).forEach(([d, v]) => {
+    const ym = d.slice(0,7);
+    if (!byMonth[ym]) byMonth[ym] = { yes: 0, no: 0 };
+    if (v) byMonth[ym].yes++; else byMonth[ym].no++;
+  });
+  const sortedMonths = Object.keys(byMonth).sort().reverse().slice(0,6);
+  const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const breakdown = document.getElementById('monthly-breakdown');
+  if (sortedMonths.length === 0) { breakdown.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;text-align:center;padding:12px 0">No data yet</p>'; return; }
+
+  breakdown.innerHTML = sortedMonths.map(ym => {
+    const [y, m] = ym.split('-');
+    const mn = mNames[parseInt(m)-1] + ' ' + y;
+    const { yes, no } = byMonth[ym];
+    const total = yes + no;
+    const barPct = total ? Math.round(yes/total*100) : 0;
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:0.8rem">
+        <span style="font-weight:600;color:var(--brown)">${mn}</span>
+        <span style="color:var(--muted)">${yes}/${total} days · ₹${yes*rate}</span>
+      </div>
+      <div style="background:var(--warm);border-radius:30px;height:8px;overflow:hidden">
+        <div style="height:100%;width:${barPct}%;background:var(--yes);border-radius:30px;transition:width 0.5s"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ==================== RESET ====================
+function confirmReset() {
+  document.getElementById('reset-modal').classList.add('open');
+}
+
+async function doReset() {
+  try {
+    const { error } = await db.from('milk_logs').delete().eq('user_id', currentUser.id);
+    if (error) throw error;
+    logs = {};
+    document.getElementById('reset-modal').classList.remove('open');
+    refreshStats();
+    refreshHome();
+    alert('All data deleted.');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ==================== START ====================
+init();
+</script>
+</body>
+</html>
