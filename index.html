@@ -78,7 +78,7 @@ button:focus-visible { outline: none !important; }
   --r:       18px;
 }
 
-html, body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; }
+html, body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: none; touch-action: pan-x pan-y; }
 
 #app { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; }
 
@@ -815,6 +815,29 @@ async function doReset(){
 
 document.querySelectorAll('.modal-overlay').forEach(m=>{
   m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
+});
+
+// ===== LOCK PULL-TO-REFRESH & PAGE BOUNCE =====
+// Prevents pull-down-to-refresh on Android Chrome and iOS Safari
+let lastTouchY = 0;
+document.addEventListener('touchstart', e => {
+  lastTouchY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  const touchY = e.touches[0].clientY;
+  const scrollTop = document.scrollingElement?.scrollTop || document.documentElement.scrollTop;
+  // Block pull-down when already at top of page
+  if (touchY > lastTouchY && scrollTop <= 0) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// Block browser keyboard shortcuts that reload the page (desktop)
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R' || e.key === 'F5')) {
+    e.preventDefault();
+  }
 });
 
 init();
