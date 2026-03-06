@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Disable pull-to-refresh in Chrome Android -->
+<meta name="mobile-web-app-capable" content="yes">
+<style>html{overscroll-behavior:none}body{overscroll-behavior:none}</style>
 <title>Milkly — Milk Tracker</title>
 
 <!-- ===== PWA: Web App Manifest ===== -->
@@ -78,9 +82,11 @@ button:focus-visible { outline: none !important; }
   --r:       18px;
 }
 
-html, body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: contain; touch-action: pan-x pan-y; position: fixed; width: 100%; }
+html { overscroll-behavior: none; overscroll-behavior-y: none; height: 100%; }
+body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: none; touch-action: pan-x pan-y; position: fixed; width: 100%; top: 0; left: 0; right: 0; bottom: 0; }
 
-#app { max-width: 430px; margin: 0 auto; min-height: 100vh; height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
+#app { max-width: 430px; margin: 0 auto; min-height: 100vh; height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; scrollbar-width: none; }
+#app::-webkit-scrollbar { display: none; }
 
 .screen { display: none; flex-direction: column; flex: 1; animation: fadeUp 0.3s cubic-bezier(.22,.68,0,1.2); }
 .screen.active { display: flex; }
@@ -817,31 +823,33 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
   m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
 });
 
-// ===== LOCK PULL-TO-REFRESH & PAGE BOUNCE =====
-let lastTouchY = 0;
+// ===== LOCK PULL-TO-REFRESH, ALLOW SMOOTH SCROLL =====
 let startTouchY = 0;
 
 document.addEventListener('touchstart', e => {
   startTouchY = e.touches[0].clientY;
-  lastTouchY  = e.touches[0].clientY;
-}, { passive: false });
+}, { passive: true });
 
 document.addEventListener('touchmove', e => {
-  const touchY    = e.touches[0].clientY;
-  const deltaY    = touchY - startTouchY;
-  const scrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-
-  // Block ANY downward pull when at top
-  if (deltaY > 0 && scrollTop <= 0) {
+  const deltaY    = e.touches[0].clientY - startTouchY;
+  const el        = e.target.closest('#app') || document.getElementById('app');
+  const scrollTop = el ? el.scrollTop : 0;
+  // Only block if pulling DOWN and already at very top (scrollTop < 2 for tolerance)
+  if (deltaY > 8 && scrollTop < 2) {
     e.preventDefault();
-    e.stopPropagation();
-    return false;
   }
-  lastTouchY = touchY;
 }, { passive: false });
 
-// Also block touchforcechange (iOS)
-document.addEventListener('touchforcechange', e => e.preventDefault(), { passive: false });
+// ===== DEBUG: show display mode (remove after testing) =====
+window.addEventListener('load', () => {
+  const mode = window.matchMedia('(display-mode: standalone)').matches
+    ? 'STANDALONE ✅ PTR should be blocked'
+    : window.navigator.standalone === true
+    ? 'STANDALONE iOS ✅ PTR should be blocked'
+    : 'BROWSER TAB ❌ PTR cannot be fully blocked';
+  console.log('Display mode:', mode);
+  // Display mode debug removed
+});
 
 init();
 
