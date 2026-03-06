@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <!-- Disable pull-to-refresh in Chrome Android -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -20,7 +20,7 @@
 
 <!-- ===== PWA: iOS Safari Fullscreen ===== -->
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Milkly">
 
 <!-- ===== PWA: iOS Touch Icons ===== -->
@@ -83,15 +83,9 @@ button:focus-visible { outline: none !important; }
 }
 
 html { overscroll-behavior: none; overscroll-behavior-y: none; height: 100%; }
-body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: none; touch-action: pan-x pan-y; position: fixed; width: 100%; top: 0; left: 0; right: 0; bottom: 0;
-  /* Fill behind status bar on iOS */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-}
+body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: none; touch-action: pan-x pan-y; position: fixed; width: 100%; top: 0; left: 0; right: 0; bottom: 0; }
 
-#app { max-width: 430px; margin: 0 auto; min-height: 100%; height: 100%; display: flex; flex-direction: column; padding: 0 0 calc(88px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; scrollbar-width: none; }
+#app { max-width: 430px; margin: 0 auto; min-height: 100vh; height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; scrollbar-width: none; }
 #app::-webkit-scrollbar { display: none; }
 
 .screen { display: none; flex-direction: column; flex: 1; animation: fadeUp 0.3s cubic-bezier(.22,.68,0,1.2); }
@@ -99,7 +93,7 @@ body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-
 @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
 
 /* TOP BAR */
-.top-bar { display: flex; align-items: center; justify-content: space-between; padding: 22px 20px 4px; padding-top: max(22px, env(safe-area-inset-top, 22px)); }
+.top-bar { display: flex; align-items: center; justify-content: space-between; padding: 22px 20px 4px; }
 .logo { font-family: 'Playfair Display', serif; font-size: 1.55rem; color: var(--brown); letter-spacing: -0.02em; display: flex; align-items: center; gap: 0; }
 .logo em { color: var(--caramel); font-style: italic; }
 .screen-label { font-size: 0.68rem; font-weight: 800; color: var(--missed); text-transform: uppercase; letter-spacing: 0.08em; }
@@ -153,7 +147,7 @@ input:focus { border-color: var(--caramel); box-shadow: 0 0 0 3px rgba(184,114,3
 .change-btn svg { width: 12px; height: 12px; }
 
 /* BOTTOM NAV */
-.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; display: flex; background: rgba(255,255,255,0.96); backdrop-filter: blur(14px); border-top: none; box-shadow: 0 -4px 24px var(--shadow); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; display: flex; background: rgba(255,255,255,0.96); backdrop-filter: blur(14px); border-top: 1px solid rgba(239,227,204,0.6); box-shadow: 0 -4px 24px var(--shadow); }
 .nav-btn { flex: 1; border: none; background: none; padding: 13px 8px 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.59rem; font-weight: 800; color: var(--missed); text-transform: uppercase; letter-spacing: 0.06em; transition: color 0.15s; position: relative; font-family: 'Plus Jakarta Sans', sans-serif; }
 .nav-btn svg { width: 22px; height: 22px; transition: transform 0.2s; }
 .nav-btn:active svg { transform: scale(0.85); }

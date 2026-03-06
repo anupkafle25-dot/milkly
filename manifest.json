@@ -4,7 +4,7 @@
   "description": "Track your daily milk intake, monitor expenses, and build healthy habits.",
   "start_url": "/index.html",
   "scope": "/",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FAF5EE",
   "theme_color": "#FAF5EE",
