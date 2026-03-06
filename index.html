@@ -3,10 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-<!-- Disable pull-to-refresh in Chrome Android -->
-<meta name="mobile-web-app-capable" content="yes">
-<style>html{overscroll-behavior:none}body{overscroll-behavior:none}</style>
 <title>Milkly — Milk Tracker</title>
 
 <!-- ===== PWA: Web App Manifest ===== -->
@@ -82,10 +78,9 @@ button:focus-visible { outline: none !important; }
   --r:       18px;
 }
 
-html { overscroll-behavior: none; overscroll-behavior-y: none; height: 100%; }
-body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: none; touch-action: pan-x pan-y; position: fixed; width: 100%; top: 0; left: 0; right: 0; bottom: 0; }
+html, body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: contain; touch-action: pan-x pan-y; position: fixed; width: 100%; }
 
-#app { max-width: 430px; margin: 0 auto; min-height: 100vh; height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; }
+#app { max-width: 430px; margin: 0 auto; min-height: 100vh; height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
 
 .screen { display: none; flex-direction: column; flex: 1; animation: fadeUp 0.3s cubic-bezier(.22,.68,0,1.2); }
 .screen.active { display: flex; }
@@ -835,6 +830,8 @@ document.addEventListener('touchmove', e => {
   const touchY    = e.touches[0].clientY;
   const deltaY    = touchY - startTouchY;
   const scrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+
+  // Block ANY downward pull when at top
   if (deltaY > 0 && scrollTop <= 0) {
     e.preventDefault();
     e.stopPropagation();
@@ -843,19 +840,8 @@ document.addEventListener('touchmove', e => {
   lastTouchY = touchY;
 }, { passive: false });
 
+// Also block touchforcechange (iOS)
 document.addEventListener('touchforcechange', e => e.preventDefault(), { passive: false });
-
-// ===== DEBUG: show display mode (remove after testing) =====
-window.addEventListener('load', () => {
-  const mode = window.matchMedia('(display-mode: standalone)').matches
-    ? 'STANDALONE ✅ PTR should be blocked'
-    : window.navigator.standalone === true
-    ? 'STANDALONE iOS ✅ PTR should be blocked'
-    : 'BROWSER TAB ❌ PTR cannot be fully blocked';
-  console.log('Display mode:', mode);
-  // Uncomment below to see on screen while testing:
-  document.body.insertAdjacentHTML('afterbegin', `<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:red;color:white;padding:8px;font-size:12px;text-align:center">${mode}</div>`);
-});
 
 init();
 
