@@ -4,6 +4,48 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Milkly — Milk Tracker</title>
+
+<!-- ===== PWA: Web App Manifest ===== -->
+<link rel="manifest" href="manifest.json">
+
+<!-- ===== PWA: Theme & Status Bar ===== -->
+<meta name="theme-color" content="#FAF5EE">
+<meta name="background-color" content="#FAF5EE">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Milkly">
+
+<!-- ===== PWA: iOS Safari Fullscreen ===== -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Milkly">
+
+<!-- ===== PWA: iOS Touch Icons ===== -->
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png">
+
+<!-- ===== PWA: iOS Splash Screens ===== -->
+<!-- iPhone 14 Pro Max -->
+<link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" href="icons/splash-1290x2796.png">
+<!-- iPhone 14 / 13 / 12 -->
+<link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="icons/splash-1170x2532.png">
+<!-- iPhone SE -->
+<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="icons/splash-750x1334.png">
+
+<!-- ===== PWA: Favicon & Android Icons ===== -->
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<link rel="shortcut icon" href="icons/icon-192.png">
+
+<!-- ===== SEO & Share ===== -->
+<meta name="description" content="Track your daily milk intake, monitor expenses, and build healthy habits with Milkly.">
+<meta name="keywords" content="milk tracker, health, daily habit, milk expense">
+<meta name="author" content="Milkly">
+<meta property="og:title" content="Milkly — Milk Tracker">
+<meta property="og:description" content="Track your daily milk intake and expenses.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="icons/icon-512.png">
+
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -239,7 +281,7 @@ input:focus { border-color: var(--caramel); box-shadow: 0 0 0 3px rgba(184,114,3
     </div>
     <div class="form-group">
       <label>Username</label>
-      <input type="text" id="auth-user" placeholder="Username" autocomplete="username">
+      <input type="text" id="auth-user" placeholder="your_username" autocomplete="username">
     </div>
     <div class="form-group">
       <label>Password</label>
@@ -411,7 +453,7 @@ input:focus { border-color: var(--caramel); box-shadow: 0 0 0 3px rgba(184,114,3
     </div>
     <div class="rate-row">
       <label>Rate per glass (₹)</label>
-      <input type="number" id="rate-input" value="35" min="1" max="9999" onchange="saveRate(); refreshStats();">
+      <input type="number" id="rate-input" value="30" min="1" max="9999" onchange="saveRate(); refreshStats();">
     </div>
   </div>
 
@@ -776,6 +818,15 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 });
 
 init();
+
+// ===== SERVICE WORKER REGISTRATION =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('Milkly SW registered:', reg.scope))
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
 </script>
 </body>
 </html>
