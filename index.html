@@ -78,9 +78,9 @@ button:focus-visible { outline: none !important; }
   --r:       18px;
 }
 
-html, body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: none; touch-action: pan-x pan-y; }
+html, body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: contain; touch-action: pan-x pan-y; position: fixed; width: 100%; }
 
-#app { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; }
+#app { max-width: 430px; margin: 0 auto; min-height: 100vh; height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
 
 .screen { display: none; flex-direction: column; flex: 1; animation: fadeUp 0.3s cubic-bezier(.22,.68,0,1.2); }
 .screen.active { display: flex; }
@@ -818,27 +818,30 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 });
 
 // ===== LOCK PULL-TO-REFRESH & PAGE BOUNCE =====
-// Prevents pull-down-to-refresh on Android Chrome and iOS Safari
 let lastTouchY = 0;
-document.addEventListener('touchstart', e => {
-  lastTouchY = e.touches[0].clientY;
-}, { passive: true });
+let startTouchY = 0;
 
-document.addEventListener('touchmove', e => {
-  const touchY = e.touches[0].clientY;
-  const scrollTop = document.scrollingElement?.scrollTop || document.documentElement.scrollTop;
-  // Block pull-down when already at top of page
-  if (touchY > lastTouchY && scrollTop <= 0) {
-    e.preventDefault();
-  }
+document.addEventListener('touchstart', e => {
+  startTouchY = e.touches[0].clientY;
+  lastTouchY  = e.touches[0].clientY;
 }, { passive: false });
 
-// Block browser keyboard shortcuts that reload the page (desktop)
-document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R' || e.key === 'F5')) {
+document.addEventListener('touchmove', e => {
+  const touchY    = e.touches[0].clientY;
+  const deltaY    = touchY - startTouchY;
+  const scrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+
+  // Block ANY downward pull when at top
+  if (deltaY > 0 && scrollTop <= 0) {
     e.preventDefault();
+    e.stopPropagation();
+    return false;
   }
-});
+  lastTouchY = touchY;
+}, { passive: false });
+
+// Also block touchforcechange (iOS)
+document.addEventListener('touchforcechange', e => e.preventDefault(), { passive: false });
 
 init();
 
