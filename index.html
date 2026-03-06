@@ -2,1003 +2,795 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Milk Tracker</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Milkly — Milk Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ===== RESET & BASE ===== */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --cream:    #FDF6EC;
-    --warm:     #F5E6CC;
-    --milk:     #FEFCF8;
-    --brown:    #4A2C0A;
-    --caramel:  #C47D2E;
-    --yes:      #4CAF68;
-    --no:       #E05252;
-    --missed:   #D4C4A8;
-    --text:     #2D1A06;
-    --muted:    #8A6A4A;
-    --shadow:   rgba(74,44,10,0.12);
-    --radius:   16px;
-  }
+/* Remove ALL tap highlights and selection */
+* { -webkit-tap-highlight-color: transparent !important; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; outline: none !important; }
+input, textarea { -webkit-user-select: text !important; user-select: text !important; }
+*:focus { outline: none !important; box-shadow: none; }
+*:focus-visible { outline: none !important; }
 
-  html, body {
-    height: 100%;
-    background: var(--cream);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 16px;
-    -webkit-font-smoothing: antialiased;
-  }
+:root {
+  --cream:   #FAF5EE;
+  --warm:    #EFE3CC;
+  --warmer:  #E4D3B0;
+  --milk:    #FEFCF8;
+  --brown:   #3C2208;
+  --caramel: #B8721E;
+  --gold:    #D4944A;
+  --yes:     #2A9455;
+  --yes-lt:  #E3F5EC;
+  --no:      #D43C3C;
+  --no-lt:   #FBEAEA;
+  --spent:   #1B7A47;
+  --spent-lt:#D0F0E2;
+  --missed:  #C0AA88;
+  --text:    #1E1008;
+  --muted:   #7A5C3A;
+  --shadow:  rgba(60,34,8,0.09);
+  --r:       18px;
+}
 
-  /* ===== BACKGROUND ===== */
-  body::before {
-    content: '';
-    position: fixed; inset: 0; z-index: -1;
-    background:
-      radial-gradient(ellipse 80% 60% at 50% -10%, #F0D9B0 0%, transparent 70%),
-      radial-gradient(ellipse 60% 40% at 110% 80%, #E8C98A 0%, transparent 60%),
-      var(--cream);
-  }
+html, body { height: 100%; background: var(--cream); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; }
 
-  /* ===== APP WRAPPER ===== */
-  #app {
-    max-width: 420px;
-    margin: 0 auto;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    padding: 0 0 80px;
-  }
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse 100% 55% at 50% -5%, #EDD9AC 0%, transparent 65%),
+    radial-gradient(ellipse 55% 45% at 100% 85%, #E4C98C 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at -5% 40%, #F0E2C8 0%, transparent 60%),
+    var(--cream);
+}
 
-  /* ===== SCREENS ===== */
-  .screen { display: none; flex-direction: column; flex: 1; animation: fadeUp 0.35s ease; }
-  .screen.active { display: flex; }
+#app { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(18px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+.screen { display: none; flex-direction: column; flex: 1; animation: fadeUp 0.3s cubic-bezier(.22,.68,0,1.2); }
+.screen.active { display: flex; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
 
-  /* ===== HEADER ===== */
-  .top-bar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 20px 0;
-  }
-  .logo {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.5rem;
-    color: var(--brown);
-    letter-spacing: -0.02em;
-  }
-  .logo span { color: var(--caramel); font-style: italic; }
-  .user-badge {
-    display: flex; align-items: center; gap: 8px;
-    background: white;
-    border-radius: 30px;
-    padding: 6px 12px 6px 8px;
-    box-shadow: 0 2px 8px var(--shadow);
-    font-size: 0.8rem; font-weight: 500;
-    color: var(--muted);
-    cursor: pointer;
-  }
-  .user-badge .avatar {
-    width: 26px; height: 26px; border-radius: 50%;
-    background: var(--caramel);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.7rem; color: white; font-weight: 600;
-  }
+/* TOP BAR */
+.top-bar { display: flex; align-items: center; justify-content: space-between; padding: 22px 20px 4px; }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.55rem; color: var(--brown); letter-spacing: -0.02em; display: flex; align-items: center; gap: 9px; }
+.logo em { color: var(--caramel); font-style: italic; }
+.screen-label { font-size: 0.68rem; font-weight: 800; color: var(--missed); text-transform: uppercase; letter-spacing: 0.08em; }
 
-  /* ===== CARDS ===== */
-  .card {
-    background: white;
-    border-radius: var(--radius);
-    box-shadow: 0 4px 20px var(--shadow);
-    padding: 24px;
-    margin: 16px 16px 0;
-  }
-  .card-sm { padding: 18px; }
+.user-badge { display: flex; align-items: center; gap: 8px; background: white; border-radius: 40px; padding: 5px 14px 5px 6px; box-shadow: 0 2px 12px var(--shadow); font-size: 0.78rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.user-badge:active { transform: scale(0.96); }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--caramel), var(--gold)); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; color: white; font-weight: 700; }
 
-  .section-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.3rem;
-    color: var(--brown);
-    margin-bottom: 4px;
-  }
-  .section-sub {
-    font-size: 0.82rem;
-    color: var(--muted);
-    margin-bottom: 20px;
-  }
+/* CARDS */
+.card { background: white; border-radius: var(--r); box-shadow: 0 2px 16px var(--shadow), 0 1px 3px rgba(0,0,0,0.03); padding: 22px; margin: 14px 16px 0; }
+.card-sm { padding: 16px 18px; }
+.section-title { font-family: 'Playfair Display', serif; font-size: 1.22rem; color: var(--brown); margin-bottom: 3px; }
+.section-sub { font-size: 0.79rem; color: var(--muted); margin-bottom: 18px; line-height: 1.5; font-weight: 500; }
 
-  /* ===== FORM ===== */
-  .form-group { margin-bottom: 16px; }
-  label {
-    display: block;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 7px;
-  }
-  input[type=text], input[type=password], input[type=number] {
-    width: 100%;
-    padding: 13px 16px;
-    border: 2px solid var(--warm);
-    border-radius: 10px;
-    background: var(--milk);
-    font-size: 0.95rem;
-    font-family: 'DM Sans', sans-serif;
-    color: var(--text);
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  input:focus { border-color: var(--caramel); }
+/* FORM */
+.form-group { margin-bottom: 13px; }
+label { display: block; font-size: 0.7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+input[type=text], input[type=password], input[type=number] { width: 100%; padding: 12px 15px; border: 1.5px solid var(--warm); border-radius: 11px; background: var(--milk); font-size: 0.92rem; font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+input:focus { border-color: var(--caramel); box-shadow: 0 0 0 3px rgba(184,114,30,0.11); outline: none !important; }
 
-  /* ===== BUTTONS ===== */
-  .btn {
-    display: block; width: 100%;
-    padding: 14px;
-    border: none; border-radius: 12px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.95rem; font-weight: 600;
-    cursor: pointer;
-    transition: all 0.18s ease;
-    text-align: center;
-  }
-  .btn-primary {
-    background: var(--brown);
-    color: white;
-  }
-  .btn-primary:hover { background: #3A1E06; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(74,44,10,0.3); }
-  .btn-primary:active { transform: translateY(0); }
-  .btn-secondary {
-    background: var(--warm);
-    color: var(--brown);
-    margin-top: 10px;
-  }
-  .btn-danger { background: #FEE2E2; color: var(--no); margin-top: 10px; }
+/* BUTTONS */
+.btn { display: block; width: 100%; padding: 13px; border: none; border-radius: 12px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.92rem; font-weight: 700; cursor: pointer; transition: all 0.18s ease; text-align: center; }
+.btn-primary { background: linear-gradient(145deg, #4A2C0A, var(--brown)); color: white; box-shadow: 0 4px 14px rgba(60,34,8,0.25); }
+.btn-primary:hover { box-shadow: 0 6px 20px rgba(60,34,8,0.32); transform: translateY(-1px); }
+.btn-primary:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(60,34,8,0.18); }
+.btn-secondary { background: var(--warm); color: var(--brown); margin-top: 10px; font-weight: 600; }
+.btn-secondary:active { background: var(--warmer); transform: scale(0.97); }
+.btn-danger { background: #FEE8E8; color: var(--no); margin-top: 10px; font-weight: 600; }
+.btn-danger:active { background: #FCDCDC; transform: scale(0.97); }
 
-  /* ===== BIG YES/NO BUTTONS ===== */
-  .yesno-wrap {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 14px; margin-top: 4px;
-  }
-  .btn-yes, .btn-no {
-    border: none; border-radius: 14px;
-    padding: 28px 16px;
-    font-size: 1.1rem; font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex; flex-direction: column;
-    align-items: center; gap: 8px;
-  }
-  .btn-yes { background: #E8F8EC; color: var(--yes); }
-  .btn-no  { background: #FCEAEA; color: var(--no); }
-  .btn-yes:hover { background: var(--yes); color: white; transform: scale(1.03); }
-  .btn-no:hover  { background: var(--no);  color: white; transform: scale(1.03); }
-  .btn-yes:active, .btn-no:active { transform: scale(0.98); }
-  .yn-icon { font-size: 2rem; }
+/* YES / NO */
+.yesno-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+.btn-yes, .btn-no { border: none; border-radius: 16px; padding: 26px 14px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s cubic-bezier(.22,.68,0,1.3); display: flex; flex-direction: column; align-items: center; gap: 10px; font-family: 'Plus Jakarta Sans', sans-serif; }
+.btn-yes { background: var(--yes-lt); color: var(--yes); }
+.btn-no  { background: var(--no-lt);  color: var(--no); }
+.btn-yes svg, .btn-no svg { width: 38px; height: 38px; }
+.btn-yes:hover { background: var(--yes); color: white; transform: scale(1.04); box-shadow: 0 8px 24px rgba(42,148,85,0.28); }
+.btn-no:hover  { background: var(--no);  color: white; transform: scale(1.04); box-shadow: 0 8px 24px rgba(212,60,60,0.26); }
+.btn-yes:active, .btn-no:active { transform: scale(0.97); }
+.btn-yes:hover .yn-svg path, .btn-yes:hover .yn-svg polyline, .btn-yes:hover .yn-svg circle { stroke: white; }
+.btn-no:hover  .yn-svg path, .btn-no:hover  .yn-svg line, .btn-no:hover  .yn-svg circle { stroke: white; }
 
-  /* Today already logged */
-  .today-status {
-    text-align: center; padding: 20px 0 8px;
-  }
-  .status-badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 22px; border-radius: 30px;
-    font-weight: 600; font-size: 1rem;
-  }
-  .status-yes { background: #E8F8EC; color: var(--yes); }
-  .status-no  { background: #FCEAEA; color: var(--no); }
+/* Today status */
+.today-status { text-align: center; padding: 18px 0 6px; }
+.status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 40px; font-weight: 700; font-size: 0.9rem; }
+.status-badge svg { width: 17px; height: 17px; flex-shrink: 0; }
+.status-yes { background: var(--yes-lt); color: var(--yes); }
+.status-no  { background: var(--no-lt);  color: var(--no); }
+.change-btn { display: inline-flex; align-items: center; gap: 5px; margin-top: 11px; background: none; border: 1.5px solid var(--warm); border-radius: 8px; padding: 7px 15px; font-size: 0.77rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.15s; font-family: 'Plus Jakarta Sans', sans-serif; }
+.change-btn:hover { border-color: var(--caramel); color: var(--caramel); }
+.change-btn svg { width: 12px; height: 12px; }
 
-  /* ===== BOTTOM NAV ===== */
-  .bottom-nav {
-    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 420px;
-    display: flex; gap: 0;
-    background: white;
-    border-top: 1px solid var(--warm);
-    box-shadow: 0 -4px 20px var(--shadow);
-  }
-  .nav-btn {
-    flex: 1; border: none; background: none;
-    padding: 14px 8px 12px;
-    cursor: pointer;
-    display: flex; flex-direction: column;
-    align-items: center; gap: 3px;
-    font-size: 0.65rem; font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.04em;
-    transition: color 0.15s;
-  }
-  .nav-btn svg { width: 22px; height: 22px; }
-  .nav-btn.active { color: var(--caramel); }
-  .nav-btn.active svg path, .nav-btn.active svg rect, .nav-btn.active svg circle, .nav-btn.active svg polyline { stroke: var(--caramel); }
+/* BOTTOM NAV */
+.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; display: flex; background: rgba(255,255,255,0.96); backdrop-filter: blur(14px); border-top: 1px solid rgba(239,227,204,0.6); box-shadow: 0 -4px 24px var(--shadow); }
+.nav-btn { flex: 1; border: none; background: none; padding: 13px 8px 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.59rem; font-weight: 800; color: var(--missed); text-transform: uppercase; letter-spacing: 0.06em; transition: color 0.15s; position: relative; font-family: 'Plus Jakarta Sans', sans-serif; }
+.nav-btn svg { width: 22px; height: 22px; transition: transform 0.2s; }
+.nav-btn:active svg { transform: scale(0.85); }
+.nav-btn.active { color: var(--caramel); }
+.nav-btn.active svg { transform: scale(1.06); }
+.nav-dot { position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--caramel); opacity: 0; transition: opacity 0.2s; }
+.nav-btn.active .nav-dot { opacity: 1; }
 
-  /* ===== CALENDAR ===== */
-  .cal-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 16px;
-  }
-  .cal-month {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.15rem; color: var(--brown);
-  }
-  .cal-nav { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: var(--muted); padding: 4px 8px; border-radius: 8px; }
-  .cal-nav:hover { background: var(--warm); }
-  .cal-grid {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    gap: 4px; text-align: center;
-  }
-  .cal-dow {
-    font-size: 0.65rem; font-weight: 700;
-    color: var(--muted); text-transform: uppercase;
-    padding-bottom: 6px; letter-spacing: 0.05em;
-  }
-  .cal-day {
-    aspect-ratio: 1;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 50%;
-    font-size: 0.82rem; font-weight: 500;
-    cursor: default;
-    transition: transform 0.1s;
-    position: relative;
-  }
-  .cal-day.blank { background: none; }
-  .cal-day.missed { background: var(--warm); color: var(--muted); cursor: pointer; }
-  .cal-day.missed:hover { transform: scale(1.12); background: #EAD9BC; }
-  .cal-day.yes { background: var(--yes); color: white; }
-  .cal-day.no  { background: var(--no);  color: white; }
-  .cal-day.today-empty { background: var(--warm); color: var(--brown); font-weight: 700; box-shadow: 0 0 0 2px var(--caramel); cursor: pointer; }
+/* CALENDAR */
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-month { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--brown); }
+.cal-nav { background: var(--cream); border: none; cursor: pointer; padding: 6px 10px; border-radius: 9px; color: var(--muted); display: flex; align-items: center; transition: background 0.15s; }
+.cal-nav:hover { background: var(--warm); }
+.cal-nav:active { background: var(--warmer); transform: scale(0.92); }
+.cal-nav svg { width: 16px; height: 16px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; text-align: center; }
+.cal-dow { font-size: 0.59rem; font-weight: 800; color: var(--missed); text-transform: uppercase; padding-bottom: 5px; letter-spacing: 0.06em; }
+.cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.78rem; font-weight: 600; transition: transform 0.12s; }
+.cal-day.blank { background: none; color: #D0C0A0; font-weight: 400; }
+.cal-day.missed { background: var(--warm); color: var(--muted); cursor: pointer; }
+.cal-day.missed:active { transform: scale(0.88); background: var(--warmer); }
+.cal-day.yes { background: var(--yes); color: white; box-shadow: 0 2px 8px rgba(42,148,85,0.28); }
+.cal-day.no  { background: var(--no);  color: white; box-shadow: 0 2px 8px rgba(212,60,60,0.22); }
+.cal-day.today-ring { box-shadow: 0 0 0 2.5px var(--caramel); background: var(--warm); color: var(--brown); font-weight: 800; cursor: pointer; }
+.cal-day.today-ring:active { transform: scale(0.9); }
 
-  /* ===== STATS ===== */
-  .stats-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-  .stat-box {
-    background: var(--cream);
-    border-radius: 12px; padding: 16px;
-    text-align: center;
-  }
-  .stat-val {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.8rem; color: var(--brown);
-    line-height: 1;
-  }
-  .stat-lbl {
-    font-size: 0.72rem; color: var(--muted);
-    font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.05em; margin-top: 4px;
-  }
-  .stat-box.full { grid-column: 1 / -1; }
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-box { background: var(--cream); border-radius: 13px; padding: 15px 14px; text-align: center; }
+.stat-box.spent { background: var(--spent-lt); grid-column: 1 / -1; border: 1.5px solid rgba(27,122,71,0.15); }
+.stat-val { font-family: 'Playfair Display', serif; font-size: 1.7rem; color: var(--brown); line-height: 1.1; }
+.stat-box.spent .stat-val { color: var(--spent); font-size: 2rem; }
+.stat-lbl { font-size: 0.66rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; margin-top: 3px; }
+.stat-box.spent .stat-lbl { color: #2A9455; opacity: 0.8; }
+.spent-icon { display: flex; justify-content: center; margin-bottom: 5px; }
+.spent-icon svg { width: 22px; height: 22px; }
 
-  /* rate setting */
-  .rate-row {
-    display: flex; align-items: center; gap: 10px;
-    margin-top: 16px; padding-top: 16px;
-    border-top: 1px solid var(--warm);
-  }
-  .rate-row label { margin: 0; white-space: nowrap; flex: 1; }
-  .rate-row input { width: 90px; text-align: center; }
+.rate-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--warm); }
+.rate-row label { margin: 0; flex: 1; font-size: 0.7rem; }
+.rate-row input { width: 88px; text-align: center; padding: 9px 10px; }
 
-  /* ===== STREAK ===== */
-  .streak-row {
-    display: flex; align-items: center; gap: 14px;
-    padding: 18px 0; border-bottom: 1px solid var(--warm);
-  }
-  .streak-icon { font-size: 2.2rem; }
-  .streak-info { flex: 1; }
-  .streak-num { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--brown); line-height: 1; }
-  .streak-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+/* Streak */
+.streak-card { display: flex; align-items: center; gap: 14px; }
+.streak-icon-box { width: 50px; height: 50px; border-radius: 14px; background: linear-gradient(135deg, #FFF0DC, #FFE0A0); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.streak-icon-box svg { width: 26px; height: 26px; }
+.streak-info { flex: 1; }
+.streak-num { font-family: 'Playfair Display', serif; font-size: 1.65rem; color: var(--brown); line-height: 1; }
+.streak-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; font-weight: 500; }
+.streak-best-val { font-family: 'Playfair Display', serif; font-size: 1.25rem; color: var(--brown); line-height: 1; text-align: right; }
+.streak-best-lbl { font-size: 0.62rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; text-align: right; margin-top: 2px; }
 
-  /* ===== MISC ===== */
-  .error-msg {
-    font-size: 0.82rem; color: var(--no);
-    margin-top: 8px; text-align: center;
-    min-height: 20px;
-  }
-  .success-msg {
-    font-size: 0.82rem; color: var(--yes);
-    margin-top: 8px; text-align: center;
-  }
-  .divider { text-align: center; font-size: 0.78rem; color: var(--muted); margin: 14px 0; }
-  .toggle-link { color: var(--caramel); cursor: pointer; font-weight: 600; text-decoration: underline; }
-  .milk-glass { font-size: 3.5rem; text-align: center; padding: 12px 0 4px; }
-  .greeting { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--brown); margin-bottom: 4px; font-style: italic; }
-  .greeting-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
-  .loading { text-align: center; padding: 40px; color: var(--muted); font-size: 0.9rem; }
+/* Week bar */
+.week-bar { display: flex; gap: 5px; margin-top: 12px; }
+.week-day { flex: 1; text-align: center; }
+.week-dot { width: 100%; aspect-ratio: 1; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+.week-dot svg { width: 13px; height: 13px; }
+.week-dot.yes { background: var(--yes); }
+.week-dot.no  { background: var(--no); }
+.week-dot.missed { background: var(--warm); }
+.week-dot.future { background: rgba(239,227,204,0.45); }
+.week-lbl { font-size: 0.59rem; color: var(--muted); margin-top: 3px; font-weight: 800; text-transform: uppercase; }
 
-  /* Week bar */
-  .week-bar {
-    display: flex; justify-content: space-between;
-    gap: 6px; margin-top: 16px;
-  }
-  .week-day { flex: 1; text-align: center; }
-  .week-dot {
-    width: 100%; aspect-ratio: 1; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.75rem; font-weight: 600;
-  }
-  .week-dot.yes { background: var(--yes); color: white; }
-  .week-dot.no  { background: var(--no);  color: white; }
-  .week-dot.missed { background: var(--warm); color: var(--muted); }
-  .week-dot.future { background: #F0E8DC; color: #C4A882; }
-  .week-lbl { font-size: 0.62rem; color: var(--muted); margin-top: 4px; font-weight: 600; }
+/* Auth */
+#auth-screen { justify-content: center; padding: 24px 16px; min-height: 100vh; }
+.auth-logo { text-align: center; margin-bottom: 26px; }
+.auth-icon { display: flex; justify-content: center; margin-bottom: 12px; }
+.auth-icon svg { width: 64px; height: 64px; }
+.auth-big-logo { font-family: 'Playfair Display', serif; font-size: 2.1rem; color: var(--brown); }
+.auth-big-logo em { color: var(--caramel); font-style: italic; }
+.auth-tagline { font-size: 0.79rem; color: var(--muted); margin-top: 4px; font-weight: 500; }
 
-  /* Modal */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0; z-index: 100;
-    background: rgba(45,26,6,0.4); backdrop-filter: blur(4px);
-    align-items: flex-end; justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal-box {
-    background: white; width: 100%; max-width: 420px;
-    border-radius: 24px 24px 0 0;
-    padding: 28px 24px 36px;
-    animation: slideUp 0.3s ease;
-  }
-  @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to   { transform: translateY(0); }
-  }
-  .modal-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; color: var(--brown); margin-bottom: 8px; }
-  .modal-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+/* Misc */
+.error-msg { font-size: 0.79rem; color: var(--no); margin-top: 7px; text-align: center; min-height: 18px; font-weight: 500; }
+.divider { text-align: center; font-size: 0.77rem; color: var(--muted); margin: 12px 0; }
+.toggle-link { color: var(--caramel); cursor: pointer; font-weight: 700; border-bottom: 1px solid rgba(184,114,30,0.4); }
+.legend-row { display: flex; gap: 18px; align-items: center; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.73rem; color: var(--muted); font-weight: 600; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.cal-tap-hint { text-align: center; font-size: 0.71rem; color: var(--missed); padding: 7px 16px 0; font-weight: 500; }
 
-  /* Spinner */
-  .spinner {
-    border: 2px solid var(--warm);
-    border-top: 2px solid var(--caramel);
-    border-radius: 50%; width: 18px; height: 18px;
-    animation: spin 0.7s linear infinite;
-    display: inline-block; vertical-align: middle; margin-right: 6px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* Milk visual */
+.milk-visual { display: flex; justify-content: center; padding: 8px 0 6px; }
+.milk-visual svg { width: 70px; height: 70px; }
+.prompt-text { text-align: center; font-size: 0.87rem; color: var(--muted); margin-bottom: 16px; font-weight: 500; }
+.greeting { font-family: 'Playfair Display', serif; font-size: 1.42rem; color: var(--brown); margin-bottom: 2px; font-style: italic; }
+.greeting-sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 18px; font-weight: 500; }
 
-  /* Auth screen centering */
-  #auth-screen { justify-content: center; padding: 20px; min-height: 100vh; }
-  .auth-logo { text-align: center; margin-bottom: 32px; }
-  .auth-logo .big-logo {
-    font-family: 'DM Serif Display', serif;
-    font-size: 2.2rem; color: var(--brown);
-  }
-  .auth-logo .tagline { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
-  .auth-logo .icon { font-size: 3rem; margin-bottom: 8px; }
+/* Spinner */
+.spinner { border: 2px solid var(--warm); border-top: 2px solid var(--caramel); border-radius: 50%; width: 15px; height: 15px; animation: spin 0.65s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(30,16,8,0.44); backdrop-filter: blur(6px); align-items: flex-end; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: white; width: 100%; max-width: 430px; border-radius: 26px 26px 0 0; padding: 24px 22px 42px; animation: slideUp 0.28s cubic-bezier(.22,.68,0,1.1); }
+@keyframes slideUp { from { transform: translateY(100%); opacity:0.7; } to { transform: translateY(0); opacity:1; } }
+.modal-handle { width: 34px; height: 4px; background: var(--warm); border-radius: 2px; margin: 0 auto 20px; }
+.modal-title { font-family: 'Playfair Display', serif; font-size: 1.18rem; color: var(--brown); margin-bottom: 5px; }
+.modal-sub { font-size: 0.81rem; color: var(--muted); margin-bottom: 18px; font-weight: 500; }
+
+/* Monthly breakdown */
+.mb-row { margin-bottom: 14px; }
+.mb-label { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.mb-name { font-weight: 700; font-size: 0.79rem; color: var(--brown); }
+.mb-val  { font-size: 0.75rem; color: var(--muted); }
+.mb-track { background: var(--warm); border-radius: 30px; height: 7px; overflow: hidden; }
+.mb-fill  { height: 100%; border-radius: 30px; background: linear-gradient(90deg, var(--yes), #4AC880); transition: width 0.6s cubic-bezier(.22,.68,0,1); }
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- ===== AUTH SCREEN ===== -->
-  <div id="auth-screen" class="screen active">
-    <div class="auth-logo">
-      <div class="icon">🥛</div>
-      <div class="big-logo">Milk<span style="color:var(--caramel);font-style:italic">ly</span></div>
-      <div class="tagline">Your personal milk tracking companion</div>
-    </div>
-    <div class="card">
-      <div class="section-title" id="auth-title">Welcome back</div>
-      <div class="section-sub" id="auth-sub">Sign in to continue tracking</div>
-      <div class="form-group" id="name-group" style="display:none">
-        <label>Full Name</label>
-        <input type="text" id="reg-name" placeholder="Your full name" autocomplete="name">
-      </div>
-      <div class="form-group">
-        <label>Username</label>
-        <input type="text" id="auth-user" placeholder="your_username" autocomplete="username">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <div id="auth-error" class="error-msg"></div>
-      <button class="btn btn-primary" onclick="doAuth()" id="auth-btn">Sign In</button>
-      <div class="divider">
-        <span id="auth-toggle-text">Don't have an account?</span>
-        <span class="toggle-link" onclick="toggleAuthMode()"> Register</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== HOME SCREEN ===== -->
-  <div id="home-screen" class="screen">
-    <div class="top-bar">
-      <div class="logo">Milk<span>ly</span></div>
-      <div class="user-badge" onclick="showLogout()">
-        <div class="avatar" id="user-avatar">?</div>
-        <span id="user-name-short">...</span>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="greeting" id="home-greeting">Good morning,</div>
-      <div class="greeting-sub" id="today-date-str">Today is —</div>
-
-      <!-- Today not logged -->
-      <div id="log-today-section">
-        <div class="milk-glass">🥛</div>
-        <p style="text-align:center; font-size:0.9rem; color:var(--muted); margin-bottom:16px;">Did you drink your milk today?</p>
-        <div class="yesno-wrap">
-          <button class="btn-yes" onclick="logToday(true)">
-            <span class="yn-icon">✓</span>
-            <span>Yes!</span>
-          </button>
-          <button class="btn-no" onclick="logToday(false)">
-            <span class="yn-icon">✗</span>
-            <span>Nope</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Today logged -->
-      <div id="logged-today-section" style="display:none">
-        <div class="today-status">
-          <div class="status-badge" id="today-status-badge">—</div>
-          <p style="font-size:0.8rem;color:var(--muted);margin-top:10px;">Logged for today</p>
-          <button class="btn btn-secondary" style="margin-top:12px;width:auto;padding:8px 20px;font-size:0.82rem" onclick="editToday()">Change</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- This week mini view -->
-    <div class="card card-sm">
-      <div style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">This Week</div>
-      <div class="week-bar" id="week-bar"></div>
-    </div>
-
-    <!-- Streak -->
-    <div class="card card-sm">
-      <div class="streak-row">
-        <div class="streak-icon">🔥</div>
-        <div class="streak-info">
-          <div class="streak-num" id="streak-num">0</div>
-          <div class="streak-sub">day streak</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:0.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;">Best</div>
-          <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;color:var(--brown)" id="best-streak">0</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== HISTORY SCREEN ===== -->
-  <div id="history-screen" class="screen">
-    <div class="top-bar">
-      <div class="logo">Milk<span>ly</span></div>
-    </div>
-    <div class="card">
-      <div class="cal-header">
-        <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
-        <div class="cal-month" id="cal-month-label">—</div>
-        <button class="cal-nav" onclick="changeMonth(1)">›</button>
-      </div>
-      <div class="cal-grid" id="cal-grid">
-        <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
-        <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div>
-        <div class="cal-dow">S</div>
-      </div>
-    </div>
-    <div class="card card-sm" style="display:flex;gap:16px;align-items:center;justify-content:center">
-      <span style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:50%;background:var(--yes);display:inline-block"></span>Drank</span>
-      <span style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:50%;background:var(--no);display:inline-block"></span>Skipped</span>
-      <span style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:50%;background:var(--warm);display:inline-block"></span>Missed</span>
-    </div>
-    <div style="padding:8px 16px 0;font-size:0.75rem;color:var(--muted);text-align:center">Tap a missed (tan) day to log it</div>
-  </div>
-
-  <!-- ===== STATS SCREEN ===== -->
-  <div id="stats-screen" class="screen">
-    <div class="top-bar">
-      <div class="logo">Milk<span>ly</span></div>
-    </div>
-    <div class="card">
-      <div class="section-title">Analytics</div>
-      <div class="section-sub">Your milk drinking insights</div>
-      <div class="stats-grid">
-        <div class="stat-box">
-          <div class="stat-val" id="stat-total-glasses">0</div>
-          <div class="stat-lbl">Total Glasses</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val" id="stat-pct">0%</div>
-          <div class="stat-lbl">Success Rate</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val" id="stat-week-glasses">0</div>
-          <div class="stat-lbl">This Week</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val" id="stat-month-glasses">0</div>
-          <div class="stat-lbl">This Month</div>
-        </div>
-        <div class="stat-box full">
-          <div class="stat-val" id="stat-cost">₹0</div>
-          <div class="stat-lbl">Total Spent</div>
-        </div>
-      </div>
-      <div class="rate-row">
-        <label>Rate per glass (₹)</label>
-        <input type="number" id="rate-input" value="30" min="1" max="999" onchange="saveRate(); refreshStats();">
-      </div>
-    </div>
-    <div class="card card-sm">
-      <div style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Monthly Breakdown</div>
-      <div id="monthly-breakdown"></div>
-    </div>
-
-    <!-- Reset -->
-    <div style="padding:0 16px;margin-top:8px">
-      <button class="btn btn-danger" onclick="confirmReset()">🗑 Reset All Data</button>
-    </div>
-  </div>
-
-  <!-- ===== BOTTOM NAV ===== -->
-  <nav class="bottom-nav" id="main-nav" style="display:none">
-    <button class="nav-btn active" id="nav-home" onclick="showScreen('home')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
+<!-- AUTH -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-logo">
+    <div class="auth-icon">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="64" height="64" rx="18" fill="#FFF8EE"/>
+        <path d="M21 15h22l-2.8 8.5H23.8L21 15Z" fill="#EDD9AC" stroke="#B8721E" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M23.8 23.5C22 30 19 37 19 43a13 13 0 0 0 26 0c0-6-3-13-5-19.5H23.8Z" fill="white" stroke="#B8721E" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M23 36c2.5-1.5 5 1.5 7.5 0s5.5-1.5 5.5 0" stroke="#2A9455" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M22 43c2.5-1.5 5 1.5 7.5 0s5.5-1.5 5.5 0" stroke="#2A9455" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="48" cy="20" r="3.5" fill="#EDD9AC"/>
+        <circle cx="52" cy="28" r="2.2" fill="#EDD9AC"/>
+        <circle cx="46" cy="29" r="1.5" fill="#EDD9AC"/>
       </svg>
-      Home
-    </button>
-    <button class="nav-btn" id="nav-history" onclick="showScreen('history')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      History
-    </button>
-    <button class="nav-btn" id="nav-stats" onclick="showScreen('stats')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="20" x2="18" y2="10"/>
-        <line x1="12" y1="20" x2="12" y2="4"/>
-        <line x1="6"  y1="20" x2="6"  y2="14"/>
-      </svg>
-      Stats
-    </button>
-  </nav>
-
+    </div>
+    <div class="auth-big-logo">Milk<em>ly</em></div>
+    <div class="auth-tagline">Your personal milk companion</div>
+  </div>
+  <div class="card">
+    <div class="section-title" id="auth-title">Welcome back</div>
+    <div class="section-sub" id="auth-sub">Sign in to continue tracking</div>
+    <div class="form-group" id="name-group" style="display:none">
+      <label>Full Name</label>
+      <input type="text" id="reg-name" placeholder="Your full name" autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="auth-user" placeholder="Username" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div id="auth-error" class="error-msg"></div>
+    <button class="btn btn-primary" onclick="doAuth()" id="auth-btn">Sign In</button>
+    <div class="divider">
+      <span id="auth-toggle-text">Don't have an account?</span>
+      <span class="toggle-link" onclick="toggleAuthMode()" id="auth-toggle-link"> Register</span>
+    </div>
+  </div>
 </div>
 
-<!-- ===== EDIT DAY MODAL ===== -->
+<!-- HOME -->
+<div id="home-screen" class="screen">
+  <div class="top-bar">
+    <div class="logo">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <path d="M9 6.5h12L19.5 11H10.5L9 6.5Z" fill="#EDD9AC" stroke="#B8721E" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M10.5 11C9.5 14.5 8 18 8 21a7 7 0 0 0 14 0c0-3-1.5-6.5-2.5-10H10.5Z" fill="white" stroke="#B8721E" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M11 18.5c1.5-.8 3 .8 4.5 0s3-.8 3 0" stroke="#2A9455" stroke-width="1.1" stroke-linecap="round"/>
+      </svg>
+      Milk<em>ly</em>
+    </div>
+    <div class="user-badge" onclick="showLogout()">
+      <div class="avatar" id="user-avatar">?</div>
+      <span id="user-name-short">...</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="greeting" id="home-greeting">Good morning,</div>
+    <div class="greeting-sub" id="today-date-str">—</div>
+
+    <div id="log-today-section">
+      <div class="milk-visual">
+        <svg viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="35" cy="35" r="33" fill="#FFF8EE"/>
+          <path d="M22 16h26l-3.2 9.5H25.2L22 16Z" fill="#EDD9AC" stroke="#B8721E" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M25.2 25.5C23 33 20 39 20 46a15 15 0 0 0 30 0c0-7-3-13-5.2-20.5H25.2Z" fill="white" stroke="#B8721E" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M25 40c2.5-1.5 5 1.5 7.5 0s5.5-1.5 5.5 0" stroke="#2A9455" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M24 47c2.5-1.5 5 1.5 7.5 0s5.5-1.5 5.5 0" stroke="#2A9455" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="51" cy="21" r="3.5" fill="#EDD9AC"/>
+          <circle cx="55" cy="29" r="2" fill="#EDD9AC"/>
+        </svg>
+      </div>
+      <p class="prompt-text">Did you drink your milk today?</p>
+      <div class="yesno-wrap">
+        <button class="btn-yes" onclick="logToday(true)">
+          <svg class="yn-svg" viewBox="0 0 38 38" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="19" cy="19" r="16"/>
+            <polyline points="11.5,19 17,24.5 26.5,13"/>
+          </svg>
+          Yes, I did!
+        </button>
+        <button class="btn-no" onclick="logToday(false)">
+          <svg class="yn-svg" viewBox="0 0 38 38" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="19" cy="19" r="16"/>
+            <line x1="13" y1="13" x2="25" y2="25"/>
+            <line x1="25" y1="13" x2="13" y2="25"/>
+          </svg>
+          Not today
+        </button>
+      </div>
+    </div>
+
+    <div id="logged-today-section" style="display:none">
+      <div class="today-status">
+        <div class="status-badge" id="today-status-badge">—</div><br>
+        <button class="change-btn" onclick="editToday()">
+          <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8.5 1.5l3 3L5 11H2v-3L8.5 1.5Z"/>
+          </svg>
+          Change entry
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card card-sm">
+    <div style="font-size:0.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">This Week</div>
+    <div class="week-bar" id="week-bar"></div>
+  </div>
+
+  <div class="card card-sm">
+    <div class="streak-card">
+      <div class="streak-icon-box">
+        <svg viewBox="0 0 26 26" fill="none">
+          <path d="M13 2C13 2 7 8.5 7 14.5a6 6 0 0 0 12 0c0-3.2-2-6-2-6s-1 3-3 3c-1.5 0-2-1.5-2-3C12 6.5 13 2 13 2Z" fill="url(#fg)" stroke="none"/>
+          <path d="M11 16.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.5-1-2.5-1-2.5s-.3 1-1 1c-.6 0-1-.5-1-1C12 13 12.3 11 12.3 11S11 14.5 11 16.5Z" fill="white" opacity="0.55"/>
+          <defs><linearGradient id="fg" x1="13" y1="2" x2="13" y2="20.5" gradientUnits="userSpaceOnUse"><stop stop-color="#FF9500"/><stop offset="1" stop-color="#E03C3C"/></linearGradient></defs>
+        </svg>
+      </div>
+      <div class="streak-info">
+        <div class="streak-num" id="streak-num">0</div>
+        <div class="streak-sub">day streak</div>
+      </div>
+      <div>
+        <div class="streak-best-lbl">Best</div>
+        <div class="streak-best-val" id="best-streak">0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="history-screen" class="screen">
+  <div class="top-bar">
+    <div class="logo">Milk<em>ly</em></div>
+    <div class="screen-label">History</div>
+  </div>
+  <div class="card">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="changeMonth(-1)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="10,3 5,8 10,13"/></svg>
+      </button>
+      <div class="cal-month" id="cal-month-label">—</div>
+      <button class="cal-nav" onclick="changeMonth(1)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,3 11,8 6,13"/></svg>
+      </button>
+    </div>
+    <div class="cal-grid" id="cal-grid">
+      <div class="cal-dow">Su</div><div class="cal-dow">Mo</div><div class="cal-dow">Tu</div>
+      <div class="cal-dow">We</div><div class="cal-dow">Th</div><div class="cal-dow">Fr</div><div class="cal-dow">Sa</div>
+    </div>
+  </div>
+  <div class="card card-sm">
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--yes)"></div>Drank</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--no)"></div>Skipped</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--warm)"></div>Missed</div>
+    </div>
+  </div>
+  <p class="cal-tap-hint">Tap any tan day to log it retroactively</p>
+</div>
+
+<!-- STATS -->
+<div id="stats-screen" class="screen">
+  <div class="top-bar">
+    <div class="logo">Milk<em>ly</em></div>
+    <div class="screen-label">Analytics</div>
+  </div>
+  <div class="card">
+    <div class="section-title">Your Stats</div>
+    <div class="section-sub">Insights into your milk habits</div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-val" id="stat-total-glasses">0</div>
+        <div class="stat-lbl">Total Glasses</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="stat-pct">0%</div>
+        <div class="stat-lbl">Success Rate</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="stat-week-glasses">0</div>
+        <div class="stat-lbl">This Week</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="stat-month-glasses">0</div>
+        <div class="stat-lbl">This Month</div>
+      </div>
+      <div class="stat-box spent">
+        <div class="spent-icon">
+          <svg viewBox="0 0 22 22" fill="none" stroke="var(--spent)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 2a9 9 0 1 0 0 18A9 9 0 0 0 11 2Z"/>
+            <path d="M13.5 8.5C13 7.5 12.1 7 11 7c-2 0-3.2 1.4-3.2 2.8s1.2 2.2 2.2 2.2c1.2 0 2.2.8 2.2 2.2C12.2 15.6 11.2 16 10 16c-1.1 0-2-.6-2.4-1.6"/>
+            <line x1="11" y1="5" x2="11" y2="7"/>
+            <line x1="11" y1="16" x2="11" y2="18"/>
+          </svg>
+        </div>
+        <div class="stat-val" id="stat-cost">₹0</div>
+        <div class="stat-lbl">Total Spent</div>
+      </div>
+    </div>
+    <div class="rate-row">
+      <label>Rate per glass (₹)</label>
+      <input type="number" id="rate-input" value="35" min="1" max="9999" onchange="saveRate(); refreshStats();">
+    </div>
+  </div>
+
+  <div class="card card-sm">
+    <div style="font-size:0.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">Monthly Breakdown</div>
+    <div id="monthly-breakdown"></div>
+  </div>
+
+  <div style="padding:0 16px;margin-top:6px">
+    <button class="btn btn-danger" onclick="confirmReset()">
+      <span style="display:inline-flex;align-items:center;gap:8px;justify-content:center">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1.5 3.5h11M4.5 3.5V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1M5.5 6.5v4M8.5 6.5v4M2.5 3.5l.75 7.5A1.25 1.25 0 0 0 4.5 12.5h5a1.25 1.25 0 0 0 1.25-1.5l.75-7.5"/>
+        </svg>
+        Reset All Data
+      </span>
+    </button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav" id="main-nav" style="display:none">
+  <button class="nav-btn active" id="nav-home" onclick="showScreen('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 10L12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z"/>
+      <polyline points="9,21 9,12 15,12 15,21"/>
+    </svg>
+    Home
+    <div class="nav-dot"></div>
+  </button>
+  <button class="nav-btn" id="nav-history" onclick="showScreen('history')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2.5"/>
+      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+      <circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/>
+      <circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/>
+    </svg>
+    History
+    <div class="nav-dot"></div>
+  </button>
+  <button class="nav-btn" id="nav-stats" onclick="showScreen('stats')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>
+    </svg>
+    Stats
+    <div class="nav-dot"></div>
+  </button>
+</nav>
+</div>
+
+<!-- EDIT MODAL -->
 <div class="modal-overlay" id="edit-modal">
   <div class="modal-box">
+    <div class="modal-handle"></div>
     <div class="modal-title" id="edit-modal-title">Log this day</div>
     <div class="modal-sub" id="edit-modal-sub">Did you drink milk?</div>
     <div class="yesno-wrap">
       <button class="btn-yes" onclick="submitEdit(true)">
-        <span class="yn-icon">✓</span><span>Yes</span>
+        <svg class="yn-svg" viewBox="0 0 38 38" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="19" cy="19" r="16"/><polyline points="11.5,19 17,24.5 26.5,13"/>
+        </svg>
+        Yes
       </button>
       <button class="btn-no" onclick="submitEdit(false)">
-        <span class="yn-icon">✗</span><span>No</span>
+        <svg class="yn-svg" viewBox="0 0 38 38" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="19" cy="19" r="16"/>
+          <line x1="13" y1="13" x2="25" y2="25"/><line x1="25" y1="13" x2="13" y2="25"/>
+        </svg>
+        No
       </button>
     </div>
-    <button class="btn btn-secondary" onclick="closeModal()" style="margin-top:14px">Cancel</button>
+    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
   </div>
 </div>
 
-<!-- ===== LOGOUT MODAL ===== -->
+<!-- LOGOUT MODAL -->
 <div class="modal-overlay" id="logout-modal">
   <div class="modal-box">
+    <div class="modal-handle"></div>
     <div class="modal-title">Account</div>
     <div class="modal-sub" id="logout-user-info">Signed in as —</div>
     <button class="btn btn-danger" onclick="doLogout()">Sign Out</button>
-    <button class="btn btn-secondary" onclick="document.getElementById('logout-modal').classList.remove('open')">Cancel</button>
+    <button class="btn btn-secondary" onclick="closeAllModals()">Cancel</button>
   </div>
 </div>
 
-<!-- ===== RESET MODAL ===== -->
+<!-- RESET MODAL -->
 <div class="modal-overlay" id="reset-modal">
   <div class="modal-box">
+    <div class="modal-handle"></div>
     <div class="modal-title">Reset All Data?</div>
-    <div class="modal-sub">This will permanently delete all your milk logs. This cannot be undone.</div>
+    <div class="modal-sub">This will permanently delete all your milk logs. This action cannot be undone.</div>
     <button class="btn btn-danger" onclick="doReset()">Yes, Delete Everything</button>
-    <button class="btn btn-secondary" onclick="document.getElementById('reset-modal').classList.remove('open')">Cancel</button>
+    <button class="btn btn-secondary" onclick="closeAllModals()">Cancel</button>
   </div>
 </div>
 
 <script>
-// ==================== CONFIG ====================
-// TODO: Replace these with your actual Supabase project URL and anon key
 const SUPABASE_URL = 'https://vsljqxolikxykcvxmvpb.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_5Yba7sqaL4trWvyil9pfEA_yXwmOIAy';
-
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ==================== STATE ====================
-let currentUser = null;
-let logs = {}; // { 'YYYY-MM-DD': true/false }
-let calYear, calMonth;
-let editingDate = null;
-let isRegisterMode = false;
+let currentUser = null, logs = {}, calYear, calMonth, editingDate = null, isRegisterMode = false;
 
-// ==================== INIT ====================
 async function init() {
-  // Check localStorage for session
   const saved = localStorage.getItem('milkly_user');
   if (saved) {
-    try {
-      currentUser = JSON.parse(saved);
-      await loadLogs();
-      showApp();
-    } catch(e) {
-      localStorage.removeItem('milkly_user');
-      showScreen('auth', true);
-    }
-  } else {
-    showScreen('auth', true);
-  }
+    try { currentUser = JSON.parse(saved); await loadLogs(); showApp(); }
+    catch(e) { localStorage.removeItem('milkly_user'); showScreen('auth', true); }
+  } else { showScreen('auth', true); }
 }
 
-// ==================== AUTH ====================
 function toggleAuthMode() {
   isRegisterMode = !isRegisterMode;
   document.getElementById('auth-title').textContent = isRegisterMode ? 'Create account' : 'Welcome back';
   document.getElementById('auth-sub').textContent = isRegisterMode ? 'Start tracking your milk habits' : 'Sign in to continue tracking';
-  document.getElementById('auth-btn').textContent = isRegisterMode ? 'Register' : 'Sign In';
+  document.getElementById('auth-btn').textContent = isRegisterMode ? 'Create Account' : 'Sign In';
   document.getElementById('auth-toggle-text').textContent = isRegisterMode ? 'Already have an account?' : "Don't have an account?";
-  document.querySelector('.toggle-link').textContent = isRegisterMode ? ' Sign In' : ' Register';
+  document.getElementById('auth-toggle-link').textContent = isRegisterMode ? ' Sign In' : ' Register';
   document.getElementById('name-group').style.display = isRegisterMode ? 'block' : 'none';
   document.getElementById('auth-error').textContent = '';
 }
 
 async function doAuth() {
-  const userInput = document.getElementById('auth-user').value.trim().toLowerCase();
-  const pass = document.getElementById('auth-pass').value;
-  const errEl = document.getElementById('auth-error');
-  errEl.textContent = '';
-
-  if (!userInput || !pass) { errEl.textContent = 'Please fill in all fields.'; return; }
-
+  const u = document.getElementById('auth-user').value.trim().toLowerCase();
+  const p = document.getElementById('auth-pass').value;
+  const err = document.getElementById('auth-error');
+  err.textContent = '';
+  if (!u || !p) { err.textContent = 'Please fill in all fields.'; return; }
   const btn = document.getElementById('auth-btn');
-  btn.innerHTML = '<span class="spinner"></span> Please wait…';
+  btn.innerHTML = '<span class="spinner"></span>Please wait…';
   btn.disabled = true;
-
   try {
     if (isRegisterMode) {
       const name = document.getElementById('reg-name').value.trim();
-      if (!name) { errEl.textContent = 'Enter your full name.'; btn.textContent='Register'; btn.disabled=false; return; }
-
-      // Check username not taken
-      const { data: existing } = await db.from('users').select('id').eq('username', userInput).single();
-      if (existing) { errEl.textContent = 'Username already taken.'; btn.textContent='Register'; btn.disabled=false; return; }
-
-      // Hash password (simple, not crypto — for personal use)
-      const hashed = btoa(pass + '_milkly_salt_' + userInput);
-      const { data, error } = await db.from('users').insert({ username: userInput, password_hash: hashed, full_name: name }).select().single();
+      if (!name) { err.textContent = 'Enter your full name.'; btn.innerHTML='Create Account'; btn.disabled=false; return; }
+      const { data: ex } = await db.from('users').select('id').eq('username', u).single();
+      if (ex) { err.textContent = 'Username already taken.'; btn.innerHTML='Create Account'; btn.disabled=false; return; }
+      const h = btoa(p + '_milkly_salt_' + u);
+      const { data, error } = await db.from('users').insert({ username: u, password_hash: h, full_name: name }).select().single();
       if (error) throw error;
       currentUser = data;
     } else {
-      const hashed = btoa(pass + '_milkly_salt_' + userInput);
-      const { data, error } = await db.from('users').select('*').eq('username', userInput).eq('password_hash', hashed).single();
-      if (error || !data) { errEl.textContent = 'Invalid username or password.'; btn.textContent='Sign In'; btn.disabled=false; return; }
+      const h = btoa(p + '_milkly_salt_' + u);
+      const { data, error } = await db.from('users').select('*').eq('username', u).eq('password_hash', h).single();
+      if (error || !data) { err.textContent = 'Invalid username or password.'; btn.innerHTML='Sign In'; btn.disabled=false; return; }
       currentUser = data;
     }
-
     localStorage.setItem('milkly_user', JSON.stringify(currentUser));
     await loadLogs();
     showApp();
   } catch(e) {
-    errEl.textContent = 'Error: ' + (e.message || 'Something went wrong');
-    btn.textContent = isRegisterMode ? 'Register' : 'Sign In';
+    err.textContent = 'Error: ' + (e.message || 'Something went wrong');
+    btn.innerHTML = isRegisterMode ? 'Create Account' : 'Sign In';
     btn.disabled = false;
   }
 }
 
 function showLogout() {
-  document.getElementById('logout-user-info').textContent = 'Signed in as ' + currentUser.full_name;
+  document.getElementById('logout-user-info').textContent = 'Signed in as ' + (currentUser?.full_name || '—');
   document.getElementById('logout-modal').classList.add('open');
 }
-
 function doLogout() {
   localStorage.removeItem('milkly_user');
   currentUser = null; logs = {};
-  document.getElementById('logout-modal').classList.remove('open');
+  closeAllModals();
   document.getElementById('main-nav').style.display = 'none';
   showScreen('auth', true);
 }
+function closeAllModals() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+}
 
-// ==================== DATA ====================
 async function loadLogs() {
   const { data, error } = await db.from('milk_logs').select('log_date, drank').eq('user_id', currentUser.id);
   if (error) throw error;
   logs = {};
   (data || []).forEach(r => { logs[r.log_date] = r.drank; });
 }
-
-async function saveLog(dateStr, drank) {
-  const { error } = await db.from('milk_logs').upsert({ user_id: currentUser.id, log_date: dateStr, drank }, { onConflict: 'user_id,log_date' });
+async function saveLog(ds, drank) {
+  const { error } = await db.from('milk_logs').upsert({ user_id: currentUser.id, log_date: ds, drank }, { onConflict: 'user_id,log_date' });
   if (error) throw error;
-  logs[dateStr] = drank;
+  logs[ds] = drank;
 }
 
-// ==================== APP SCREENS ====================
 function showApp() {
   document.getElementById('auth-screen').classList.remove('active');
   document.getElementById('main-nav').style.display = 'flex';
   showScreen('home');
-  refreshHome();
 }
-
-function showScreen(name, isAuth = false) {
+function showScreen(name, isAuth=false) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(name + '-screen').classList.add('active');
+  document.getElementById(name+'-screen').classList.add('active');
   if (!isAuth) {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    const nb = document.getElementById('nav-' + name);
+    const nb = document.getElementById('nav-'+name);
     if (nb) nb.classList.add('active');
-
-    if (name === 'history') refreshCalendar();
-    if (name === 'stats')   refreshStats();
-    if (name === 'home')    refreshHome();
+    if (name==='history') refreshCalendar();
+    if (name==='stats')   refreshStats();
+    if (name==='home')    refreshHome();
   }
 }
 
-// ==================== HOME ====================
 function todayStr() {
   const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
 function refreshHome() {
-  const now = new Date();
-  const hour = now.getHours();
-  const greet = hour < 12 ? 'Good morning,' : hour < 17 ? 'Good afternoon,' : 'Good evening,';
-  document.getElementById('home-greeting').textContent = greet;
-
-  const firstName = (currentUser?.full_name || '').split(' ')[0];
-  const dateOpts = { weekday:'long', month:'long', day:'numeric' };
-  document.getElementById('today-date-str').textContent = now.toLocaleDateString('en-US', dateOpts);
-
-  document.getElementById('user-avatar').textContent = firstName[0]?.toUpperCase() || '?';
-  document.getElementById('user-name-short').textContent = firstName;
-
-  const td = todayStr();
-  const todayLogged = td in logs;
-  document.getElementById('log-today-section').style.display = todayLogged ? 'none' : 'block';
-  document.getElementById('logged-today-section').style.display = todayLogged ? 'block' : 'none';
-
-  if (todayLogged) {
+  const now = new Date(); const h = now.getHours();
+  document.getElementById('home-greeting').textContent = (h<12?'Good morning,':(h<17?'Good afternoon,':'Good evening,'));
+  document.getElementById('today-date-str').textContent = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const fn = (currentUser?.full_name||'').split(' ')[0];
+  document.getElementById('user-avatar').textContent = (fn[0]||'?').toUpperCase();
+  document.getElementById('user-name-short').textContent = fn;
+  const td = todayStr(); const logged = td in logs;
+  document.getElementById('log-today-section').style.display = logged ? 'none' : 'block';
+  document.getElementById('logged-today-section').style.display = logged ? 'block' : 'none';
+  if (logged) {
     const b = document.getElementById('today-status-badge');
-    b.textContent = logs[td] ? '✓ Drank milk today' : '✗ Skipped today';
-    b.className = 'status-badge ' + (logs[td] ? 'status-yes' : 'status-no');
+    const drank = logs[td];
+    b.innerHTML = drank
+      ? `<svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5,8.5 7.5,12.5 13.5,5.5"/></svg>Drank milk today`
+      : `<svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="4" x2="13" y2="13"/><line x1="13" y1="4" x2="4" y2="13"/></svg>Skipped today`;
+    b.className = 'status-badge '+(drank?'status-yes':'status-no');
   }
-
-  refreshWeekBar();
-  refreshStreak();
+  refreshWeekBar(); refreshStreak();
 }
 
 function refreshWeekBar() {
-  const bar = document.getElementById('week-bar');
-  bar.innerHTML = '';
-  const days = ['S','M','T','W','T','F','S'];
-  const now = new Date();
-  const dow = now.getDay(); // 0=Sun
-  const td = todayStr();
-
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - dow + i);
-    const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-    const isFuture = ds > td;
-    let cls = 'future', icon = days[i];
+  const bar = document.getElementById('week-bar'); bar.innerHTML = '';
+  const days=['S','M','T','W','T','F','S']; const now=new Date(); const dow=now.getDay(); const td=todayStr();
+  for (let i=0;i<7;i++) {
+    const d=new Date(now); d.setDate(now.getDate()-dow+i);
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const isFuture=ds>td; let cls='future', inner='';
     if (!isFuture) {
-      if (ds in logs) { cls = logs[ds] ? 'yes' : 'no'; icon = logs[ds] ? '✓' : '✗'; }
-      else { cls = 'missed'; }
+      if (ds in logs) {
+        cls=logs[ds]?'yes':'no';
+        inner=logs[ds]
+          ?`<svg viewBox="0 0 13 13" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6.5 5,9.5 11,3.5"/></svg>`
+          :`<svg viewBox="0 0 13 13" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="3" x2="10" y2="10"/><line x1="10" y1="3" x2="3" y2="10"/></svg>`;
+      } else cls='missed';
     }
-    bar.innerHTML += `<div class="week-day">
-      <div class="week-dot ${cls}">${icon}</div>
-      <div class="week-lbl">${days[i]}</div>
-    </div>`;
+    bar.innerHTML+=`<div class="week-day"><div class="week-dot ${cls}">${inner}</div><div class="week-lbl">${days[i]}</div></div>`;
   }
 }
 
 function refreshStreak() {
-  const td = todayStr();
-  let streak = 0, best = 0, cur = 0;
-  // Build sorted dates
-  const allDates = Object.keys(logs).filter(k => logs[k]).sort();
-  if (allDates.length === 0) { document.getElementById('streak-num').textContent = 0; document.getElementById('best-streak').textContent = 0; return; }
-
-  // Current streak from today backward
-  let d = new Date(); 
-  while (true) {
-    const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    if (logs[ds] === true) { streak++; d.setDate(d.getDate()-1); }
-    else if (ds === td && !(td in logs)) { d.setDate(d.getDate()-1); } // today not logged yet, skip
-    else break;
-    if (streak > 365) break;
+  const td=todayStr(); const all=Object.keys(logs).filter(k=>logs[k]).sort();
+  if (!all.length) { document.getElementById('streak-num').textContent=0; document.getElementById('best-streak').textContent=0; return; }
+  let streak=0; let d=new Date();
+  for (let i=0;i<400;i++) {
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if (logs[ds]===true) { streak++; } else if (ds===td&&!(td in logs)) {} else break;
+    d.setDate(d.getDate()-1);
   }
-
-  // Best streak
-  let prev = null, run = 0;
-  allDates.forEach(ds => {
-    if (prev) {
-      const diff = (new Date(ds) - new Date(prev)) / 86400000;
-      if (diff === 1) { run++; } else { best = Math.max(best, run); run = 1; }
-    } else { run = 1; }
-    prev = ds;
+  let best=0, run=0, prev=null;
+  all.forEach(ds => {
+    run = prev && (new Date(ds)-new Date(prev))/86400000===1 ? run+1 : 1;
+    best=Math.max(best,run); prev=ds;
   });
-  best = Math.max(best, run);
-
-  document.getElementById('streak-num').textContent = streak;
-  document.getElementById('best-streak').textContent = best;
+  document.getElementById('streak-num').textContent=streak;
+  document.getElementById('best-streak').textContent=best;
 }
 
 async function logToday(drank) {
-  const td = todayStr();
-  try {
-    await saveLog(td, drank);
-    refreshHome();
-  } catch(e) { alert('Error saving: ' + e.message); }
+  try { await saveLog(todayStr(), drank); refreshHome(); }
+  catch(e) { alert('Error: '+e.message); }
 }
-
 function editToday() {
-  editingDate = todayStr();
-  document.getElementById('edit-modal-title').textContent = 'Change today\'s log';
-  document.getElementById('edit-modal-sub').textContent = 'Did you drink milk today?';
+  editingDate=todayStr();
+  document.getElementById('edit-modal-title').textContent="Change today's log";
+  document.getElementById('edit-modal-sub').textContent='Did you drink milk today?';
   document.getElementById('edit-modal').classList.add('open');
 }
 
-// ==================== CALENDAR ====================
 function refreshCalendar() {
-  const now = new Date();
-  if (!calYear) { calYear = now.getFullYear(); calMonth = now.getMonth(); }
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('cal-month-label').textContent = monthNames[calMonth] + ' ' + calYear;
-
-  const grid = document.getElementById('cal-grid');
-  // Remove day cells (keep DOW headers = first 7 children)
-  while (grid.children.length > 7) grid.removeChild(grid.lastChild);
-
-  const firstDay = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const td = todayStr();
-
-  for (let i = 0; i < firstDay; i++) {
-    const el = document.createElement('div');
-    el.className = 'cal-day blank'; grid.appendChild(el);
-  }
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    const ds = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-    const isFuture = ds > td;
-    const el = document.createElement('div');
-    el.textContent = day;
-    if (isFuture) { el.className = 'cal-day blank'; el.style.color='#C4A882'; }
-    else if (ds in logs) { el.className = 'cal-day ' + (logs[ds] ? 'yes' : 'no'); }
-    else if (ds === td) { el.className = 'cal-day today-empty'; el.title = 'Log today'; el.onclick = () => openEditModal(ds); }
-    else { el.className = 'cal-day missed'; el.onclick = () => openEditModal(ds); }
+  const now=new Date(); if(!calYear){calYear=now.getFullYear();calMonth=now.getMonth();}
+  const mn=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent=mn[calMonth]+' '+calYear;
+  const grid=document.getElementById('cal-grid');
+  while(grid.children.length>7) grid.removeChild(grid.lastChild);
+  const first=new Date(calYear,calMonth,1).getDay();
+  const dim=new Date(calYear,calMonth+1,0).getDate(); const td=todayStr();
+  for(let i=0;i<first;i++){const e=document.createElement('div');e.className='cal-day blank';grid.appendChild(e);}
+  for(let day=1;day<=dim;day++){
+    const ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    const el=document.createElement('div'); el.textContent=day;
+    if(ds>td){el.className='cal-day blank';el.style.color='#C8B48A';}
+    else if(ds in logs){el.className='cal-day '+(logs[ds]?'yes':'no');}
+    else if(ds===td){el.className='cal-day today-ring';el.onclick=()=>openEditModal(ds);}
+    else{el.className='cal-day missed';el.onclick=()=>openEditModal(ds);}
     grid.appendChild(el);
   }
 }
-
-function changeMonth(dir) {
-  calMonth += dir;
-  if (calMonth < 0) { calMonth = 11; calYear--; }
-  if (calMonth > 11) { calMonth = 0; calYear++; }
+function changeMonth(dir){
+  calMonth+=dir; if(calMonth<0){calMonth=11;calYear--;}if(calMonth>11){calMonth=0;calYear++;}
   refreshCalendar();
 }
-
-function openEditModal(ds) {
-  editingDate = ds;
-  const d = new Date(ds + 'T12:00:00');
-  const opts = { weekday:'long', month:'long', day:'numeric' };
-  document.getElementById('edit-modal-title').textContent = d.toLocaleDateString('en-US', opts);
-  document.getElementById('edit-modal-sub').textContent = 'Did you drink milk on this day?';
+function openEditModal(ds){
+  editingDate=ds;
+  const d=new Date(ds+'T12:00:00');
+  document.getElementById('edit-modal-title').textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  document.getElementById('edit-modal-sub').textContent='Did you drink milk on this day?';
   document.getElementById('edit-modal').classList.add('open');
 }
-
-async function submitEdit(drank) {
-  if (!editingDate) return;
-  try {
-    await saveLog(editingDate, drank);
-    closeModal();
-    if (document.getElementById('history-screen').classList.contains('active')) refreshCalendar();
-    if (document.getElementById('home-screen').classList.contains('active')) refreshHome();
-  } catch(e) { alert('Error: ' + e.message); }
+async function submitEdit(drank){
+  if(!editingDate) return;
+  try{
+    await saveLog(editingDate,drank); closeModal();
+    if(document.getElementById('history-screen').classList.contains('active')) refreshCalendar();
+    if(document.getElementById('home-screen').classList.contains('active')) refreshHome();
+  }catch(e){alert('Error: '+e.message);}
 }
+function closeModal(){document.getElementById('edit-modal').classList.remove('open');editingDate=null;}
 
-function closeModal() {
-  document.getElementById('edit-modal').classList.remove('open');
-  editingDate = null;
-}
+function saveRate(){localStorage.setItem('milkly_rate',parseFloat(document.getElementById('rate-input').value)||30);}
+function getRate(){return parseFloat(localStorage.getItem('milkly_rate'))||30;}
 
-// ==================== STATS ====================
-function saveRate() {
-  const r = parseFloat(document.getElementById('rate-input').value) || 30;
-  localStorage.setItem('milkly_rate', r);
-}
-
-function getRate() {
-  const r = localStorage.getItem('milkly_rate');
-  return r ? parseFloat(r) : 30;
-}
-
-function refreshStats() {
-  document.getElementById('rate-input').value = getRate();
-  const rate = getRate();
-  const td = todayStr();
-  const now = new Date();
-
-  // All time
-  const totalGlasses = Object.values(logs).filter(v => v === true).length;
-  const totalLogged  = Object.keys(logs).length;
-  const pct = totalLogged ? Math.round(totalGlasses / totalLogged * 100) : 0;
-
-  // This week
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  const weekStartStr = weekStart.getFullYear()+'-'+String(weekStart.getMonth()+1).padStart(2,'0')+'-'+String(weekStart.getDate()).padStart(2,'0');
-  const weekGlasses = Object.entries(logs).filter(([d,v]) => d >= weekStartStr && d <= td && v === true).length;
-
-  // This month
-  const monthStr = String(now.getFullYear())+'-'+String(now.getMonth()+1).padStart(2,'0');
-  const monthGlasses = Object.entries(logs).filter(([d,v]) => d.startsWith(monthStr) && v === true).length;
-
-  document.getElementById('stat-total-glasses').textContent = totalGlasses;
-  document.getElementById('stat-pct').textContent = pct + '%';
-  document.getElementById('stat-week-glasses').textContent = weekGlasses;
-  document.getElementById('stat-month-glasses').textContent = monthGlasses;
-  document.getElementById('stat-cost').textContent = '₹' + (totalGlasses * rate).toLocaleString();
-
-  // Monthly breakdown
-  const byMonth = {};
-  Object.entries(logs).forEach(([d, v]) => {
-    const ym = d.slice(0,7);
-    if (!byMonth[ym]) byMonth[ym] = { yes: 0, no: 0 };
-    if (v) byMonth[ym].yes++; else byMonth[ym].no++;
-  });
-  const sortedMonths = Object.keys(byMonth).sort().reverse().slice(0,6);
-  const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const breakdown = document.getElementById('monthly-breakdown');
-  if (sortedMonths.length === 0) { breakdown.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;text-align:center;padding:12px 0">No data yet</p>'; return; }
-
-  breakdown.innerHTML = sortedMonths.map(ym => {
-    const [y, m] = ym.split('-');
-    const mn = mNames[parseInt(m)-1] + ' ' + y;
-    const { yes, no } = byMonth[ym];
-    const total = yes + no;
-    const barPct = total ? Math.round(yes/total*100) : 0;
-    return `<div style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:0.8rem">
-        <span style="font-weight:600;color:var(--brown)">${mn}</span>
-        <span style="color:var(--muted)">${yes}/${total} days · ₹${yes*rate}</span>
-      </div>
-      <div style="background:var(--warm);border-radius:30px;height:8px;overflow:hidden">
-        <div style="height:100%;width:${barPct}%;background:var(--yes);border-radius:30px;transition:width 0.5s"></div>
-      </div>
-    </div>`;
+function refreshStats(){
+  document.getElementById('rate-input').value=getRate();
+  const rate=getRate(); const now=new Date(); const td=todayStr();
+  const tg=Object.values(logs).filter(v=>v===true).length;
+  const tl=Object.keys(logs).length; const pct=tl?Math.round(tg/tl*100):0;
+  const ws_d=new Date(now); ws_d.setDate(now.getDate()-now.getDay());
+  const ws=ws_d.getFullYear()+'-'+String(ws_d.getMonth()+1).padStart(2,'0')+'-'+String(ws_d.getDate()).padStart(2,'0');
+  const wg=Object.entries(logs).filter(([d,v])=>d>=ws&&d<=td&&v===true).length;
+  const ms=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const mg=Object.entries(logs).filter(([d,v])=>d.startsWith(ms)&&v===true).length;
+  document.getElementById('stat-total-glasses').textContent=tg;
+  document.getElementById('stat-pct').textContent=pct+'%';
+  document.getElementById('stat-week-glasses').textContent=wg;
+  document.getElementById('stat-month-glasses').textContent=mg;
+  document.getElementById('stat-cost').textContent='₹'+(tg*rate).toLocaleString('en-IN');
+  const bm={}; Object.entries(logs).forEach(([d,v])=>{const ym=d.slice(0,7);if(!bm[ym])bm[ym]={y:0,n:0};if(v)bm[ym].y++;else bm[ym].n++;});
+  const sm=Object.keys(bm).sort().reverse().slice(0,6);
+  const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const bd=document.getElementById('monthly-breakdown');
+  if(!sm.length){bd.innerHTML='<p style="color:var(--muted);font-size:0.84rem;text-align:center;padding:14px 0;font-weight:500">No data yet — start logging!</p>';return;}
+  bd.innerHTML=sm.map(ym=>{
+    const [y,m]=ym.split('-'); const mn2=mn[parseInt(m)-1]+' '+y;
+    const{y:yes,n:no}=bm[ym]; const total=yes+no; const p=total?Math.round(yes/total*100):0;
+    return `<div class="mb-row"><div class="mb-label"><span class="mb-name">${mn2}</span><span class="mb-val">${yes}/${total} days &nbsp;·&nbsp; ₹${(yes*rate).toLocaleString('en-IN')}</span></div><div class="mb-track"><div class="mb-fill" style="width:${p}%"></div></div></div>`;
   }).join('');
 }
 
-// ==================== RESET ====================
-function confirmReset() {
-  document.getElementById('reset-modal').classList.add('open');
+function confirmReset(){document.getElementById('reset-modal').classList.add('open');}
+async function doReset(){
+  try{
+    const{error}=await db.from('milk_logs').delete().eq('user_id',currentUser.id);
+    if(error)throw error;
+    logs={}; closeAllModals(); refreshStats(); refreshHome();
+  }catch(e){alert('Error: '+e.message);}
 }
 
-async function doReset() {
-  try {
-    const { error } = await db.from('milk_logs').delete().eq('user_id', currentUser.id);
-    if (error) throw error;
-    logs = {};
-    document.getElementById('reset-modal').classList.remove('open');
-    refreshStats();
-    refreshHome();
-    alert('All data deleted.');
-  } catch(e) { alert('Error: ' + e.message); }
-}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
+});
 
-// ==================== START ====================
 init();
 </script>
 </body>
