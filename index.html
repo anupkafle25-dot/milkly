@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Disable pull-to-refresh in Chrome Android -->
+<meta name="mobile-web-app-capable" content="yes">
+<style>html{overscroll-behavior:none}body{overscroll-behavior:none}</style>
 <title>Milkly — Milk Tracker</title>
 
 <!-- ===== PWA: Web App Manifest ===== -->
@@ -78,9 +82,10 @@ button:focus-visible { outline: none !important; }
   --r:       18px;
 }
 
-html, body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: contain; touch-action: pan-x pan-y; position: fixed; width: 100%; }
+html { overscroll-behavior: none; overscroll-behavior-y: none; height: 100%; }
+body { height: 100%; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; background: #FAF5EE; overscroll-behavior: none; overscroll-behavior-y: none; touch-action: pan-x pan-y; position: fixed; width: 100%; top: 0; left: 0; right: 0; bottom: 0; }
 
-#app { max-width: 430px; margin: 0 auto; min-height: 100vh; height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
+#app { max-width: 430px; margin: 0 auto; min-height: 100vh; height: 100vh; display: flex; flex-direction: column; padding: 0 0 88px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; }
 
 .screen { display: none; flex-direction: column; flex: 1; animation: fadeUp 0.3s cubic-bezier(.22,.68,0,1.2); }
 .screen.active { display: flex; }
